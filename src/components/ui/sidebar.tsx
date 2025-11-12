@@ -17,6 +17,7 @@ const navItems = [
   { href: '/admin', label: 'Dashboard', icon: <LayoutDashboard /> },
   { href: '/physical-capability', label: 'Capacidades', icon: <Dumbbell /> },
   { href: '/physical-subcapability', label: 'Subcapacidades', icon: <Dumbbell /> },
+  { href: '/training-method', label: 'Métodos de entrenamiento', icon: <Dumbbell /> },
 ];
 
 export default function Sidebar() {
