@@ -259,7 +259,8 @@ export default function TrainingMethodPage() {
                   <TableHead>Subcapacidad</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              </TableHeader>              <TableBody>
+              </TableHeader>
+              <TableBody>
                 {filtered.map((x) => (
                   <TableRow key={x.id}>
                     <TableCell>{x.id}</TableCell>
