@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -37,51 +37,68 @@ import {
 } from "@/components/ui/table";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
-// ---------------- Types ----------------
-// FormValues generated from Zod
-export type FormValues = z.infer<typeof schema>;
-
-interface TrainingMethod {
-  id: number;
-  name: string;
-  description?: string | null;
-  subcapability_id: number;
-}
-
-interface Subcapability {
-  id: number;
-  name: string;
-}
-
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// ---------------- Schema ----------------
 const schema = z.object({
   id: z.number().int().positive().optional(),
-  name: z.string().min(2, "Min 2 chars"),
-  description: z.string().optional(),
-  subcapability_id: z.number().int(),
+  name: z.string().min(2, "Requerido"),
+  group_id: z.number().int(),
+});
+
+type FormValues = z.infer<typeof schema>;
+
+interface MuscleGroup {
+  id: number;
+  name: string;
+}
+
+interface MuscleSubgroup {
+  id: number;
+  name: string;
+  group_id: number;
+  group?: MuscleGroup | null;
+}
+
+const buildSubgroup = (item: any): MuscleSubgroup => ({
+  id: item.id,
+  name: item.name,
+  group_id: item.group_id,
+  group: Array.isArray(item.group)
+    ? item.group[0] ?? null
+    : item.group ?? null,
 });
 
 const PAGE_SIZE = 10;
 
-export default function TrainingMethodPage() {
-  const [methods, setMethods] = useState<TrainingMethod[]>([]);
-  const [subcaps, setSubcaps] = useState<Subcapability[]>([]);
+export default function MuscleSubgroupPage() {
+  const [records, setRecords] = useState<MuscleSubgroup[]>([]);
+  const [groups, setGroups] = useState<MuscleGroup[]>([]);
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState<TrainingMethod | null>(null);
+  const [editing, setEditing] = useState<MuscleSubgroup | null>(null);
   const [open, setOpen] = useState(false);
-  const [toDelete, setToDelete] = useState<TrainingMethod | null>(null);
+  const [toDelete, setToDelete] = useState<MuscleSubgroup | null>(null);
   const [page, setPage] = useState(1);
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      name: "",
+      group_id: 0,
+    },
+  });
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return methods.filter((x) => !q || x.name.toLowerCase().includes(q));
-  }, [methods, query]);
+    return records.filter(
+      (item) =>
+        !q ||
+        item.name.toLowerCase().includes(q) ||
+        item.group?.name.toLowerCase().includes(q)
+    );
+  }, [records, query]);
 
   const paginated = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
@@ -94,154 +111,136 @@ export default function TrainingMethodPage() {
     ? Math.min(page * PAGE_SIZE, filtered.length)
     : 0;
 
+  const loadSubgroups = useCallback(async () => {
+    const { data } = await supabase
+      .from("muscle_subgroup")
+      .select("id, name, group_id, group:group_id ( id, name )")
+      .order("name", { ascending: true });
+
+    setRecords((data || []).map(buildSubgroup));
+  }, []);
+
   useEffect(() => {
-    const fetch = async () => {
-      const { data: subc } = await supabase
-        .from("physical_subcapability")
+    const loadGroups = async () => {
+      const { data } = await supabase
+        .from("muscle_group")
         .select("id, name")
         .order("name", { ascending: true });
 
-      const { data } = await supabase
-        .from("training_method")
-        .select("id, name, description, subcapability_id")
-        .order("id", { ascending: true });
-
-      setSubcaps(subc || []);
-      setMethods(data || []);
-      setLoading(false);
+      setGroups(data || []);
     };
-    fetch();
-  }, []);
+
+    loadGroups();
+    loadSubgroups();
+  }, [loadSubgroups]);
+
+  useEffect(() => {
+    if (editing) {
+      form.reset({
+        id: editing.id,
+        name: editing.name,
+        group_id: editing.group_id,
+      });
+    } else {
+      form.reset({
+        name: "",
+        group_id: groups[0]?.id || 0,
+      });
+    }
+  }, [editing, form, groups]);
 
   useEffect(() => {
     setPage(1);
   }, [query]);
 
   useEffect(() => {
-    setPage((prev) => {
-      const lastPage = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-      return Math.min(prev, lastPage);
-    });
-  }, [filtered.length]);
-
-  const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: editing
-      ? {
-          id: editing.id,
-          name: editing.name,
-          description: editing.description ?? "",
-          subcapability_id: editing.subcapability_id,
-        }
-      : {
-          name: "",
-          description: "",
-          subcapability_id: 1,
-        },
-  });
+    setPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
 
   const submit = async (values: FormValues) => {
     if (editing?.id) {
       const { error } = await supabase
-        .from("training_method")
-        .update({
-          name: values.name,
-          description: values.description,
-          subcapability_id: values.subcapability_id,
-        })
+        .from("muscle_subgroup")
+        .update({ name: values.name, group_id: values.group_id })
         .eq("id", editing.id);
 
-      if (!error)
-        setMethods((prev) =>
-          prev.map((p) => (p.id === editing.id ? { ...p, ...values } : p))
-        );
+      if (!error) {
+        await loadSubgroups();
+      }
     } else {
-      const { data, error } = await supabase
-        .from("training_method")
-        .insert({
-          name: values.name,
-          description: values.description,
-          subcapability_id: values.subcapability_id,
-        })
-        .select()
-        .single();
+      const { error } = await supabase
+        .from("muscle_subgroup")
+        .insert({ name: values.name, group_id: values.group_id });
 
-      if (!error && data) setMethods((prev) => [data, ...prev]);
+      if (!error) {
+        await loadSubgroups();
+      }
     }
+
     setOpen(false);
+    setEditing(null);
   };
 
   const onDelete = async () => {
     if (!toDelete) return;
 
-    const { error } = await supabase
-      .from("training_method")
-      .delete()
-      .eq("id", toDelete.id);
-
-    if (!error)
-      setMethods((prev) => prev.filter((p) => p.id !== toDelete.id));
-
+    await supabase.from("muscle_subgroup").delete().eq("id", toDelete.id);
+    setRecords((prev) => prev.filter((item) => item.id !== toDelete.id));
     setToDelete(null);
   };
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto max-w-4xl space-y-6">
+      <div className="mx-auto max-w-6xl space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Métodos de entrenamiento</h1>
+            <h1 className="text-2xl font-bold">Subgrupos musculares</h1>
             <p className="text-muted-foreground">
-              Catálogo asociado a subcapacidades físicas.
+              Administra el catálogo maestro de subgrupos.
             </p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button
                 onClick={() => {
-                  form.reset();
                   setEditing(null);
                   setOpen(true);
                 }}
               >
-                <Plus className="mr-2 h-4 w-4" /> Nuevo
+                <Plus className="mr-2 h-4 w-4" />
+                Nuevo
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[450px]">
+            <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
-                  {editing ? "Editar método" : "Crear método"}
+                  {editing ? "Editar subgrupo" : "Nuevo subgrupo"}
                 </DialogTitle>
                 <DialogDescription>
-                  Selecciona la subcapacidad asociada.
+                  Completa la información del subgrupo muscular.
                 </DialogDescription>
               </DialogHeader>
-
-              <form className="space-y-4" onSubmit={form.handleSubmit(submit)}>
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Nombre</Label>
-                  <Input id="name" {...form.register("name")} />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="description">Descripción</Label>
-                  <Input id="description" {...form.register("description")} />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="subcapability_id">Subcapacidad</Label>
-                  <select
-                    id="subcapability_id"
-                    {...form.register("subcapability_id", { valueAsNumber: true })}
-                    className="border px-3 py-2 rounded text-sm"
-                  >
-                    {subcaps.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+              <form className="space-y-6" onSubmit={form.handleSubmit(submit)}>
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">Nombre</Label>
+                    <Input id="name" {...form.register("name")} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="group_id">Grupo muscular</Label>
+                    <select
+                      id="group_id"
+                      {...form.register("group_id", { valueAsNumber: true })}
+                      className="border px-3 py-2 rounded text-sm"
+                    >
+                      {groups.map((group) => (
+                        <option key={group.id} value={group.id}>
+                          {group.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
@@ -262,7 +261,7 @@ export default function TrainingMethodPage() {
           </CardHeader>
           <CardContent>
             <Input
-              placeholder="Buscar por nombre"
+              placeholder="Buscar por subgrupo o grupo"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -278,30 +277,23 @@ export default function TrainingMethodPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Descripción</TableHead>
-                  <TableHead>Subcapacidad</TableHead>
+                  <TableHead>Subgrupo</TableHead>
+                  <TableHead>Grupo muscular</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginated.map((x) => (
-                  <TableRow key={x.id}>
-                    <TableCell>{x.id}</TableCell>
-                    <TableCell>{x.name}</TableCell>
-                    <TableCell>{x.description || "-"}</TableCell>
-                    <TableCell>
-                      {subcaps.find((s) => s.id === x.subcapability_id)?.name || "-"}
-                    </TableCell>
+                {paginated.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{item.name}</TableCell>
+                    <TableCell>{item.group?.name || "-"}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
                         <Button
                           variant="outline"
                           size="icon"
                           onClick={() => {
-                            setEditing(x);
-                            form.reset({ ...x, description: x.description ?? "" });
+                            setEditing(item);
                             setOpen(true);
                           }}
                         >
@@ -310,7 +302,7 @@ export default function TrainingMethodPage() {
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => setToDelete(x)}
+                          onClick={() => setToDelete(item)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -318,15 +310,16 @@ export default function TrainingMethodPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {filtered.length === 0 && (
+                {paginated.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    <TableCell colSpan={3} className="text-center text-muted-foreground">
                       Sin resultados.
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
+
             <div className="flex flex-col gap-2 pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
               <p>
                 Mostrando {rangeStart}-{rangeEnd} de {filtered.length} registros
@@ -341,7 +334,7 @@ export default function TrainingMethodPage() {
                   Anterior
                 </Button>
                 <span>
-                  Pagina {page} de {totalPages}
+                  Página {page} de {totalPages}
                 </span>
                 <Button
                   variant="outline"
@@ -357,7 +350,7 @@ export default function TrainingMethodPage() {
         </Card>
 
         {/* Delete Dialog */}
-        <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+        <AlertDialog open={!!toDelete} onOpenChange={(next) => !next && setToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Eliminar</AlertDialogTitle>
@@ -375,3 +368,4 @@ export default function TrainingMethodPage() {
     </div>
   );
 }
+

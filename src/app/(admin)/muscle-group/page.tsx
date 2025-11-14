@@ -37,18 +37,9 @@ import {
 } from "@/components/ui/table";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
-// ---------------- Types ----------------
-// FormValues generated from Zod
 export type FormValues = z.infer<typeof schema>;
 
-interface TrainingMethod {
-  id: number;
-  name: string;
-  description?: string | null;
-  subcapability_id: number;
-}
-
-interface Subcapability {
+interface MuscleGroup {
   id: number;
   name: string;
 }
@@ -58,30 +49,25 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// ---------------- Schema ----------------
 const schema = z.object({
   id: z.number().int().positive().optional(),
   name: z.string().min(2, "Min 2 chars"),
-  description: z.string().optional(),
-  subcapability_id: z.number().int(),
 });
 
 const PAGE_SIZE = 10;
 
-export default function TrainingMethodPage() {
-  const [methods, setMethods] = useState<TrainingMethod[]>([]);
-  const [subcaps, setSubcaps] = useState<Subcapability[]>([]);
+export default function MuscleGroupPage() {
+  const [groups, setGroups] = useState<MuscleGroup[]>([]);
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState<TrainingMethod | null>(null);
+  const [editing, setEditing] = useState<MuscleGroup | null>(null);
   const [open, setOpen] = useState(false);
-  const [toDelete, setToDelete] = useState<TrainingMethod | null>(null);
+  const [toDelete, setToDelete] = useState<MuscleGroup | null>(null);
   const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return methods.filter((x) => !q || x.name.toLowerCase().includes(q));
-  }, [methods, query]);
+    return groups.filter((x) => !q || x.name.toLowerCase().includes(q));
+  }, [groups, query]);
 
   const paginated = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
@@ -96,20 +82,14 @@ export default function TrainingMethodPage() {
 
   useEffect(() => {
     const fetch = async () => {
-      const { data: subc } = await supabase
-        .from("physical_subcapability")
-        .select("id, name")
-        .order("name", { ascending: true });
-
       const { data } = await supabase
-        .from("training_method")
-        .select("id, name, description, subcapability_id")
+        .from("muscle_group")
+        .select("id, name")
         .order("id", { ascending: true });
 
-      setSubcaps(subc || []);
-      setMethods(data || []);
-      setLoading(false);
+      setGroups(data || []);
     };
+
     fetch();
   }, []);
 
@@ -126,61 +106,56 @@ export default function TrainingMethodPage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: editing
-      ? {
-          id: editing.id,
-          name: editing.name,
-          description: editing.description ?? "",
-          subcapability_id: editing.subcapability_id,
-        }
-      : {
-          name: "",
-          description: "",
-          subcapability_id: 1,
-        },
+    defaultValues: { name: "" },
   });
+
+  useEffect(() => {
+    if (editing) {
+      form.reset({ id: editing.id, name: editing.name });
+    } else {
+      form.reset({ name: "" });
+    }
+  }, [editing, form]);
 
   const submit = async (values: FormValues) => {
     if (editing?.id) {
       const { error } = await supabase
-        .from("training_method")
-        .update({
-          name: values.name,
-          description: values.description,
-          subcapability_id: values.subcapability_id,
-        })
+        .from("muscle_group")
+        .update({ name: values.name })
         .eq("id", editing.id);
 
-      if (!error)
-        setMethods((prev) =>
-          prev.map((p) => (p.id === editing.id ? { ...p, ...values } : p))
+      if (!error) {
+        setGroups((prev) =>
+          prev.map((item) =>
+            item.id === editing.id ? { ...item, name: values.name } : item
+          )
         );
+      }
     } else {
       const { data, error } = await supabase
-        .from("training_method")
-        .insert({
-          name: values.name,
-          description: values.description,
-          subcapability_id: values.subcapability_id,
-        })
+        .from("muscle_group")
+        .insert({ name: values.name })
         .select()
         .single();
 
-      if (!error && data) setMethods((prev) => [data, ...prev]);
+      if (!error && data) setGroups((prev) => [data, ...prev]);
     }
+
     setOpen(false);
+    setEditing(null);
   };
 
   const onDelete = async () => {
     if (!toDelete) return;
 
     const { error } = await supabase
-      .from("training_method")
+      .from("muscle_group")
       .delete()
       .eq("id", toDelete.id);
 
-    if (!error)
-      setMethods((prev) => prev.filter((p) => p.id !== toDelete.id));
+    if (!error) {
+      setGroups((prev) => prev.filter((item) => item.id !== toDelete.id));
+    }
 
     setToDelete(null);
   };
@@ -191,57 +166,34 @@ export default function TrainingMethodPage() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Métodos de entrenamiento</h1>
+            <h1 className="text-2xl font-bold">Grupos musculares</h1>
             <p className="text-muted-foreground">
-              Catálogo asociado a subcapacidades físicas.
+              Catalogo para clasificar los musculos trabajados.
             </p>
           </div>
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={(next) => setOpen(next)}>
             <DialogTrigger asChild>
               <Button
                 onClick={() => {
-                  form.reset();
                   setEditing(null);
                   setOpen(true);
                 }}
               >
-                <Plus className="mr-2 h-4 w-4" /> Nuevo
+                <Plus className="mr-2 h-4 w-4" />
+                Nuevo
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[450px]">
+            <DialogContent>
               <DialogHeader>
-                <DialogTitle>
-                  {editing ? "Editar método" : "Crear método"}
-                </DialogTitle>
+                <DialogTitle>{editing ? "Editar grupo" : "Nuevo grupo"}</DialogTitle>
                 <DialogDescription>
-                  Selecciona la subcapacidad asociada.
+                  Define el nombre del grupo muscular.
                 </DialogDescription>
               </DialogHeader>
-
               <form className="space-y-4" onSubmit={form.handleSubmit(submit)}>
                 <div className="grid gap-2">
                   <Label htmlFor="name">Nombre</Label>
                   <Input id="name" {...form.register("name")} />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="description">Descripción</Label>
-                  <Input id="description" {...form.register("description")} />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="subcapability_id">Subcapacidad</Label>
-                  <select
-                    id="subcapability_id"
-                    {...form.register("subcapability_id", { valueAsNumber: true })}
-                    className="border px-3 py-2 rounded text-sm"
-                  >
-                    {subcaps.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
@@ -258,7 +210,7 @@ export default function TrainingMethodPage() {
         {/* Search */}
         <Card>
           <CardHeader>
-            <CardTitle>Búsqueda</CardTitle>
+            <CardTitle>Busqueda</CardTitle>
           </CardHeader>
           <CardContent>
             <Input
@@ -280,28 +232,21 @@ export default function TrainingMethodPage() {
                 <TableRow>
                   <TableHead>ID</TableHead>
                   <TableHead>Nombre</TableHead>
-                  <TableHead>Descripción</TableHead>
-                  <TableHead>Subcapacidad</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginated.map((x) => (
-                  <TableRow key={x.id}>
-                    <TableCell>{x.id}</TableCell>
-                    <TableCell>{x.name}</TableCell>
-                    <TableCell>{x.description || "-"}</TableCell>
-                    <TableCell>
-                      {subcaps.find((s) => s.id === x.subcapability_id)?.name || "-"}
-                    </TableCell>
+                {paginated.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{item.id}</TableCell>
+                    <TableCell>{item.name}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
                         <Button
                           variant="outline"
                           size="icon"
                           onClick={() => {
-                            setEditing(x);
-                            form.reset({ ...x, description: x.description ?? "" });
+                            setEditing(item);
                             setOpen(true);
                           }}
                         >
@@ -310,7 +255,7 @@ export default function TrainingMethodPage() {
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => setToDelete(x)}
+                          onClick={() => setToDelete(item)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -318,9 +263,9 @@ export default function TrainingMethodPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {filtered.length === 0 && (
+                {paginated.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    <TableCell colSpan={3} className="text-center text-muted-foreground">
                       Sin resultados.
                     </TableCell>
                   </TableRow>
@@ -357,12 +302,12 @@ export default function TrainingMethodPage() {
         </Card>
 
         {/* Delete Dialog */}
-        <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+        <AlertDialog open={!!toDelete} onOpenChange={(next) => !next && setToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Eliminar</AlertDialogTitle>
               <AlertDialogDescription>
-                ¿Estás seguro de que deseas eliminar "{toDelete?.name}"?
+                Estas seguro de que deseas eliminar "{toDelete?.name}"?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

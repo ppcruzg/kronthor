@@ -1,18 +1,32 @@
-// components/ui/sidebar.tsx
-'use client';
+﻿'use client';
 
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+
 import {
   LayoutDashboard,
   Dumbbell,
   Menu,
   ChevronLeft,
   ChevronDown,
-  Building2,
+  Activity,
+  Gauge,
+  Workflow,
+  GitBranch,
+  Package,
+  Wrench,
+  Network,
+  Drumstick,
+  SplitSquareHorizontal,
+  GitMerge,
+  Link2,
+  Brain,
+  Medal,
+  Puzzle,
+  Layers,
 } from 'lucide-react';
 
 interface NavItem {
@@ -21,40 +35,80 @@ interface NavItem {
   icon: React.ReactNode;
 }
 
-interface NavGroup {
-  label: string;
-  icon: React.ReactNode;
-  items: NavItem[];
-}
-
-type NavSection = 
-  | { type: 'item'; href: string; label: string; icon: React.ReactNode }
-  | { type: 'group'; label: string; icon: React.ReactNode; items: NavItem[] };
+type NavSection =
+  | {
+      type: 'item';
+      href: string;
+      label: string;
+      icon: React.ReactNode;
+    }
+  | {
+      type: 'group';
+      label: string;
+      icon: React.ReactNode;
+      items: NavItem[];
+    };
 
 const navSections: NavSection[] = [
-  { type: 'item', href: '/admin', label: 'Dashboard', icon: <LayoutDashboard /> },
+  {
+    type: 'item',
+    href: '/admin',
+    label: 'Dashboard',
+    icon: <LayoutDashboard />,
+  },
+
   {
     type: 'group',
-    label: 'Estructura',
-    icon: <Building2 />,
+    label: 'Ejercicios',
+    icon: <Dumbbell />,
     items: [
-      { href: '/physical-capability', label: 'Capacidades', icon: <Dumbbell /> },
-      { href: '/physical-subcapability', label: 'Subcapacidades', icon: <Dumbbell /> },
-      { href: '/training-method', label: 'Métodos de entrenamiento', icon: <Dumbbell /> },
+      { href: '/exercise', label: 'Ejercicios', icon: <Dumbbell /> },
+      { href: '/training-method', label: 'Metodos de entrenamiento', icon: <Activity /> },
+      { href: '/difficulty-level', label: 'Niveles de dificultad', icon: <Gauge /> },
+      { href: '/movement-pattern', label: 'Patrones de movimiento', icon: <Workflow /> },
+      { href: '/exercise-movement-pattern', label: 'Ejercicio + Patron', icon: <GitBranch /> },
+      { href: '/equipment', label: 'Equipamiento', icon: <Package /> },
+      { href: '/exercise-equipment', label: 'Ejercicio + Equipamiento', icon: <Wrench /> },
+    ],
+  },
+
+  {
+    type: 'group',
+    label: 'Musculos',
+    icon: <Network />,
+    items: [
+      { href: '/muscle-group', label: 'Grupos musculares', icon: <Layers /> },
+      { href: '/muscle-subgroup', label: 'Subgrupos musculares', icon: <SplitSquareHorizontal /> },
+      { href: '/muscle', label: 'Musculos', icon: <Drumstick /> },
+      { href: '/exercise-muscle-subgroup', label: 'Ejercicio + Subgrupo', icon: <GitMerge /> },
+      { href: '/exercise-muscle', label: 'Ejercicio + Musculo', icon: <Link2 /> },
+    ],
+  },
+
+  {
+    type: 'group',
+    label: 'Estructura Fisica',
+    icon: <Brain />,
+    items: [
+      { href: '/physical-capability', label: 'Capacidades', icon: <Medal /> },
+      { href: '/physical-subcapability', label: 'Subcapacidades', icon: <Puzzle /> },
     ],
   },
 ];
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(['Estructura']);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([
+    'Ejercicios',
+    'Musculos',
+    'Estructura Fisica',
+  ]);
+
   const pathname = usePathname();
 
-  const toggleGroup = (groupLabel: string) => {
+  const toggleGroup = (label: string) => {
     setExpandedGroups((prev) =>
-      prev.includes(groupLabel)
-        ? prev.filter((g) => g !== groupLabel)
-        : [...prev, groupLabel]
+      prev.includes(label) ? prev.filter((g) => g !== label) : [...prev, label]
     );
   };
 
@@ -66,7 +120,7 @@ export default function Sidebar() {
       )}
     >
       <div className="flex items-center justify-between p-4">
-        <span className={cn('text-lg font-bold', collapsed && 'hidden')}>KronThor</span>
+        {!collapsed && <span className="text-lg font-bold">KronThor</span>}
         <Button
           variant="ghost"
           size="icon"
@@ -76,6 +130,7 @@ export default function Sidebar() {
           {collapsed ? <Menu /> : <ChevronLeft />}
         </Button>
       </div>
+
       <nav className="flex-1 px-2 space-y-2">
         {navSections.map((section) => {
           if (section.type === 'item') {
@@ -97,42 +152,37 @@ export default function Sidebar() {
             );
           }
 
-          // section.type === 'group'
-          const groupSection = section as { type: 'group'; label: string; icon: React.ReactNode; items: NavItem[] };
-          const isExpanded = expandedGroups.includes(groupSection.label);
-          const hasActiveChild = groupSection.items.some(
-            (item) => pathname === item.href
-          );
+          const group = section;
+          const open = expandedGroups.includes(group.label);
+          const isActive = group.items.some((i) => i.href === pathname);
 
           return (
-            <div key={groupSection.label}>
+            <div key={group.label}>
               <button
-                onClick={() => toggleGroup(groupSection.label)}
+                onClick={() => toggleGroup(group.label)}
                 className={cn(
                   'w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all',
                   collapsed ? 'justify-center' : '',
-                  hasActiveChild
+                  isActive
                     ? 'bg-gray-800 text-white font-semibold'
                     : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                 )}
               >
-                {groupSection.icon}
+                {group.icon}
                 {!collapsed && (
                   <>
-                    <span className="flex-1 text-left">{groupSection.label}</span>
+                    <span className="flex-1">{group.label}</span>
                     <ChevronDown
                       size={18}
-                      className={cn(
-                        'transition-transform',
-                        isExpanded ? 'rotate-0' : '-rotate-90'
-                      )}
+                      className={cn('transition-transform', open ? 'rotate-0' : '-rotate-90')}
                     />
                   </>
                 )}
               </button>
-              {isExpanded && !collapsed && (
+
+              {!collapsed && open && (
                 <div className="ml-4 space-y-1 mt-1">
-                  {groupSection.items.map((item) => (
+                  {group.items.map((item) => (
                     <Link
                       key={item.href}
                       href={item.href}
