@@ -57,6 +57,11 @@ interface MovementPattern {
   name: string;
 }
 
+const normalizeRelation = <T,>(value: T | T[] | null | undefined): T | undefined => {
+  if (!value) return undefined;
+  return Array.isArray(value) ? value[0] : value;
+};
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -128,16 +133,20 @@ export default function ExerciseMovementPatternPage() {
             .order("id", { ascending: true }),
         ]);
 
-      setExercises(exerciseList || []);
-      setPatterns(patternList || []);
+      setExercises((exerciseList || []).map(({ id, name_es }) => ({ id, name_es })));
+      setPatterns((patternList || []).map(({ id, name }) => ({ id, name })));
       setRecords(
-        (data || []).map((item) => ({
-          id: item.id,
-          exercise_id: item.exercise_id,
-          pattern_id: item.pattern_id,
-          exercise_name: item.exercise?.name_es ?? "Sin nombre",
-          pattern_name: item.movement_pattern?.name ?? "Sin nombre",
-        }))
+        (data || []).map((item) => {
+          const exercise = normalizeRelation(item.exercise);
+          const pattern = normalizeRelation(item.movement_pattern);
+          return {
+            id: item.id,
+            exercise_id: item.exercise_id,
+            pattern_id: item.pattern_id,
+            exercise_name: exercise?.name_es ?? "Sin nombre",
+            pattern_name: pattern?.name ?? "Sin nombre",
+          };
+        })
       );
       setLoading(false);
     };
@@ -196,6 +205,8 @@ export default function ExerciseMovementPatternPage() {
         .single();
 
       if (!error && data) {
+        const exercise = normalizeRelation(data.exercise);
+        const pattern = normalizeRelation(data.movement_pattern);
         setRecords((prev) =>
           prev.map((p) =>
             p.id === editing.id
@@ -203,8 +214,8 @@ export default function ExerciseMovementPatternPage() {
                   id: data.id,
                   exercise_id: data.exercise_id,
                   pattern_id: data.pattern_id,
-                  exercise_name: data.exercise?.name_es ?? "Sin nombre",
-                  pattern_name: data.movement_pattern?.name ?? "Sin nombre",
+                  exercise_name: exercise?.name_es ?? "Sin nombre",
+                  pattern_name: pattern?.name ?? "Sin nombre",
                 }
               : p
           )
@@ -235,13 +246,15 @@ export default function ExerciseMovementPatternPage() {
         .single();
 
       if (!error && data) {
+        const exercise = normalizeRelation(data.exercise);
+        const pattern = normalizeRelation(data.movement_pattern);
         setRecords((prev) => [
           {
             id: data.id,
             exercise_id: data.exercise_id,
             pattern_id: data.pattern_id,
-            exercise_name: data.exercise?.name_es ?? "Sin nombre",
-            pattern_name: data.movement_pattern?.name ?? "Sin nombre",
+            exercise_name: exercise?.name_es ?? "Sin nombre",
+            pattern_name: pattern?.name ?? "Sin nombre",
           },
           ...prev,
         ]);

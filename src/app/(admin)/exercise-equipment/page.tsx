@@ -57,6 +57,11 @@ interface Equipment {
   name: string;
 }
 
+const normalizeRelation = <T,>(value: T | T[] | null | undefined): T | undefined => {
+  if (!value) return undefined;
+  return Array.isArray(value) ? value[0] : value;
+};
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -128,16 +133,20 @@ export default function ExerciseEquipmentPage() {
             .order("id", { ascending: true }),
         ]);
 
-      setExercises(exerciseList || []);
-      setEquipment(equipmentList || []);
+      setExercises((exerciseList || []).map(({ id, name_es }) => ({ id, name_es })));
+      setEquipment((equipmentList || []).map(({ id, name }) => ({ id, name })));
       setRecords(
-        (data || []).map((item) => ({
-          id: item.id,
-          exercise_id: item.exercise_id,
-          equipment_id: item.equipment_id,
-          exercise_name: item.exercise?.name_es ?? "Sin nombre",
-          equipment_name: item.equipment?.name ?? "Sin nombre",
-        }))
+        (data || []).map((item) => {
+          const exercise = normalizeRelation(item.exercise);
+          const equipment = normalizeRelation(item.equipment);
+          return {
+            id: item.id,
+            exercise_id: item.exercise_id,
+            equipment_id: item.equipment_id,
+            exercise_name: exercise?.name_es ?? "Sin nombre",
+            equipment_name: equipment?.name ?? "Sin nombre",
+          };
+        })
       );
       setLoading(false);
     };
@@ -196,6 +205,8 @@ export default function ExerciseEquipmentPage() {
         .single();
 
       if (!error && data) {
+        const exercise = normalizeRelation(data.exercise);
+        const equipment = normalizeRelation(data.equipment);
         setRecords((prev) =>
           prev.map((p) =>
             p.id === editing.id
@@ -203,8 +214,8 @@ export default function ExerciseEquipmentPage() {
                   id: data.id,
                   exercise_id: data.exercise_id,
                   equipment_id: data.equipment_id,
-                  exercise_name: data.exercise?.name_es ?? "Sin nombre",
-                  equipment_name: data.equipment?.name ?? "Sin nombre",
+                  exercise_name: exercise?.name_es ?? "Sin nombre",
+                  equipment_name: equipment?.name ?? "Sin nombre",
                 }
               : p
           )
@@ -235,13 +246,15 @@ export default function ExerciseEquipmentPage() {
         .single();
 
       if (!error && data) {
+        const exercise = normalizeRelation(data.exercise);
+        const equipment = normalizeRelation(data.equipment);
         setRecords((prev) => [
           {
             id: data.id,
             exercise_id: data.exercise_id,
             equipment_id: data.equipment_id,
-            exercise_name: data.exercise?.name_es ?? "Sin nombre",
-            equipment_name: data.equipment?.name ?? "Sin nombre",
+            exercise_name: exercise?.name_es ?? "Sin nombre",
+            equipment_name: equipment?.name ?? "Sin nombre",
           },
           ...prev,
         ]);
