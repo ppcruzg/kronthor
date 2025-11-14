@@ -65,6 +65,11 @@ interface MuscleRecord {
   muscle_group_name: string;
 }
 
+const normalizeRelation = <T,>(value: T | T[] | null | undefined): T | undefined => {
+  if (!value) return undefined;
+  return Array.isArray(value) ? value[0] : value;
+};
+
 const PAGE_SIZE = 10;
 
 export default function MusclePage() {
@@ -123,18 +128,22 @@ export default function MusclePage() {
       .order("name", { ascending: true });
 
     if (error) {
-      toast.error("No se pudieron obtener los músculos");
+      toast.error("No se pudieron obtener los musculos");
       return;
     }
 
     setRecords(
-      (data || []).map((item) => ({
-        id: item.id,
-        name: item.name,
-        subgroup_id: item.subgroup_id,
-        subgroup_name: item.subgroup?.name ?? "",
-        muscle_group_name: item.subgroup?.group?.name ?? "",
-      }))
+      (data || []).map((item) => {
+        const subgroup = normalizeRelation(item.subgroup);
+        const group = normalizeRelation(subgroup?.group);
+        return {
+          id: item.id,
+          name: item.name,
+          subgroup_id: item.subgroup_id,
+          subgroup_name: subgroup?.name ?? "",
+          muscle_group_name: group?.name ?? "",
+        };
+      })
     );
   }, []);
 
@@ -151,11 +160,14 @@ export default function MusclePage() {
       }
 
       setSubgroups(
-        (data || []).map((item) => ({
-          id: item.id,
-          name: item.name,
-          group_name: item.group?.name ?? "",
-        }))
+        (data || []).map((item) => {
+          const group = normalizeRelation(item.group);
+          return {
+            id: item.id,
+            name: item.name,
+            group_name: group?.name ?? "",
+          };
+        })
       );
     };
 
@@ -198,7 +210,7 @@ export default function MusclePage() {
         return;
       }
 
-      toast.success("Músculo actualizado");
+      toast.success("M�sculo actualizado");
     } else {
       const { error } = await supabase
         .from("muscle")
@@ -209,7 +221,7 @@ export default function MusclePage() {
         return;
       }
 
-      toast.success("Músculo creado");
+      toast.success("M�sculo creado");
     }
 
     await loadRecords();
@@ -227,7 +239,7 @@ export default function MusclePage() {
       return;
     }
 
-    toast.success("Músculo eliminado");
+    toast.success("M�sculo eliminado");
     setRecords((prev) => prev.filter((item) => item.id !== toDelete.id));
     setToDelete(null);
   };
@@ -238,9 +250,9 @@ export default function MusclePage() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Músculos</h1>
+            <h1 className="text-2xl font-bold">M�sculos</h1>
             <p className="text-muted-foreground">
-              Administra el catálogo maestro de músculos.
+              Administra el cat�logo maestro de m�sculos.
             </p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
@@ -257,9 +269,9 @@ export default function MusclePage() {
             </DialogTrigger>
             <DialogContent className="max-w-xl md:max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>{editing ? "Editar músculo" : "Nuevo músculo"}</DialogTitle>
+                <DialogTitle>{editing ? "Editar m�sculo" : "Nuevo m�sculo"}</DialogTitle>
                 <DialogDescription>
-                  Completa la información del músculo.
+                  Completa la informaci�n del m�sculo.
                 </DialogDescription>
               </DialogHeader>
               <form className="space-y-6" onSubmit={form.handleSubmit(submit)}>
@@ -298,11 +310,11 @@ export default function MusclePage() {
         {/* Search */}
         <Card>
           <CardHeader>
-            <CardTitle>Búsqueda</CardTitle>
+            <CardTitle>B�squeda</CardTitle>
           </CardHeader>
           <CardContent>
             <Input
-              placeholder="Buscar por músculo, subgrupo o grupo"
+              placeholder="Buscar por m�sculo, subgrupo o grupo"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -318,7 +330,7 @@ export default function MusclePage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Músculo</TableHead>
+                  <TableHead>M�sculo</TableHead>
                   <TableHead>Subgrupo</TableHead>
                   <TableHead>Grupo muscular</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
@@ -376,7 +388,7 @@ export default function MusclePage() {
                   Anterior
                 </Button>
                 <span>
-                  Página {page} de {totalPages}
+                  P�gina {page} de {totalPages}
                 </span>
                 <Button
                   variant="outline"
@@ -397,7 +409,7 @@ export default function MusclePage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Eliminar</AlertDialogTitle>
               <AlertDialogDescription>
-                ¿Estás seguro de que deseas eliminar "{toDelete?.name}"?
+                �Est�s seguro de que deseas eliminar "{toDelete?.name}"?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -410,3 +422,7 @@ export default function MusclePage() {
     </div>
   );
 }
+
+
+
+
