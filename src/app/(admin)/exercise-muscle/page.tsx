@@ -46,10 +46,8 @@ const supabase = createClient(
 const schema = z.object({
   id: z.number().int().positive().optional(),
   exercise_id: z.string().uuid({ message: "Selecciona un ejercicio" }),
-  muscle_id: z.number().int({ message: "Selecciona un músculo" }),
-  role: z.enum(["primary", "secondary"], {
-    required_error: "Selecciona un rol",
-  }),
+  muscle_id: z.number().int({ message: "Selecciona un musculo" }),
+  role: z.enum(["primary", "secondary"]),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -76,6 +74,11 @@ interface ExerciseMuscleRecord {
   subgroup_name: string;
   group_name: string;
 }
+
+const normalizeRelation = <T,>(value: T | T[] | null | undefined): T | undefined => {
+  if (!value) return undefined;
+  return Array.isArray(value) ? value[0] : value;
+};
 
 const PAGE_SIZE = 10;
 const ROLE_OPTIONS = [
@@ -154,16 +157,22 @@ export default function ExerciseMusclePage() {
     }
 
     setRecords(
-      (data || []).map((item) => ({
-        id: item.id,
-        exercise_id: item.exercise_id,
-        muscle_id: item.muscle_id,
-        role: (item.role as "primary" | "secondary") ?? "primary",
-        exercise_name: item.exercise?.name_es ?? "",
-        muscle_name: item.muscle?.name ?? "",
-        subgroup_name: item.muscle?.subgroup?.name ?? "",
-        group_name: item.muscle?.subgroup?.group?.name ?? "",
-      }))
+      (data || []).map((item) => {
+        const exercise = normalizeRelation(item.exercise);
+        const muscle = normalizeRelation(item.muscle);
+        const subgroup = normalizeRelation(muscle?.subgroup);
+        const group = normalizeRelation(subgroup?.group);
+        return {
+          id: item.id,
+          exercise_id: item.exercise_id,
+          muscle_id: item.muscle_id,
+          role: (item.role as "primary" | "secondary") ?? "primary",
+          exercise_name: exercise?.name_es ?? "",
+          muscle_name: muscle?.name ?? "",
+          subgroup_name: subgroup?.name ?? "",
+          group_name: group?.name ?? "",
+        };
+      })
     );
   }, []);
 
@@ -179,18 +188,22 @@ export default function ExerciseMusclePage() {
         ]);
 
       if (exerciseError || muscleError) {
-        toast.error("No se pudieron cargar los catálogos");
+        toast.error("No se pudieron cargar los cat?logos");
         return;
       }
 
-      setExercises(exerciseList || []);
+      setExercises((exerciseList || []).map(({ id, name_es }) => ({ id, name_es })));
       setMuscles(
-        (muscleList || []).map((item) => ({
-          id: item.id,
-          name: item.name,
-          subgroup_name: item.subgroup?.name ?? "",
-          group_name: item.subgroup?.group?.name ?? "",
-        }))
+        (muscleList || []).map((item) => {
+          const subgroup = normalizeRelation(item.subgroup);
+          const group = normalizeRelation(subgroup?.group);
+          return {
+            id: item.id,
+            name: item.name,
+            subgroup_name: subgroup?.name ?? "",
+            group_name: group?.name ?? "",
+          };
+        })
       );
     };
 
@@ -247,7 +260,7 @@ export default function ExerciseMusclePage() {
 
   const submit = async (values: FormValues) => {
     if (await checkDuplicate(values)) {
-      toast.error("La combinación ya existe");
+      toast.error("La combinaci?n ya existe");
       return;
     }
 
@@ -266,7 +279,7 @@ export default function ExerciseMusclePage() {
         return;
       }
 
-      toast.success("Relación actualizada");
+      toast.success("Relaci?n actualizada");
     } else {
       const { error } = await supabase
         .from("exercise_muscle")
@@ -281,7 +294,7 @@ export default function ExerciseMusclePage() {
         return;
       }
 
-      toast.success("Relación creada");
+      toast.success("Relaci?n creada");
     }
 
     await loadRecords();
@@ -299,7 +312,7 @@ export default function ExerciseMusclePage() {
       return;
     }
 
-    toast.success("Relación eliminada");
+    toast.success("Relaci?n eliminada");
     setRecords((prev) => prev.filter((item) => item.id !== toDelete.id));
     setToDelete(null);
   };
@@ -310,9 +323,9 @@ export default function ExerciseMusclePage() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Ejercicio - Músculos</h1>
+            <h1 className="text-2xl font-bold">Ejercicio - musculos</h1>
             <p className="text-muted-foreground">
-              Administra las relaciones entre ejercicios y músculos.
+              Administra las relaciones entre ejercicios y musculos.
             </p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
@@ -330,10 +343,10 @@ export default function ExerciseMusclePage() {
             <DialogContent className="max-w-xl md:max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
-                  {editing ? "Editar relación" : "Nueva relación"}
+                  {editing ? "Editar relaci?n" : "Nueva relaci?n"}
                 </DialogTitle>
                 <DialogDescription>
-                  Selecciona el ejercicio, el músculo y el rol.
+                  Selecciona el ejercicio, el musculo y el rol.
                 </DialogDescription>
               </DialogHeader>
               <form className="space-y-6" onSubmit={form.handleSubmit(submit)}>
@@ -353,7 +366,7 @@ export default function ExerciseMusclePage() {
                     </select>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="muscle_id">Músculo</Label>
+                    <Label htmlFor="muscle_id">musculo</Label>
                     <select
                       id="muscle_id"
                       {...form.register("muscle_id", { valueAsNumber: true })}
@@ -402,11 +415,11 @@ export default function ExerciseMusclePage() {
         {/* Search */}
         <Card>
           <CardHeader>
-            <CardTitle>Búsqueda</CardTitle>
+            <CardTitle>B?squeda</CardTitle>
           </CardHeader>
           <CardContent>
             <Input
-              placeholder="Buscar por ejercicio, músculo, subgrupo, grupo o rol"
+              placeholder="Buscar por ejercicio, musculo, subgrupo, grupo o rol"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -423,7 +436,7 @@ export default function ExerciseMusclePage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Ejercicio</TableHead>
-                  <TableHead>Músculo</TableHead>
+                  <TableHead>musculo</TableHead>
                   <TableHead>Subgrupo</TableHead>
                   <TableHead>Grupo muscular</TableHead>
                   <TableHead>Rol</TableHead>
@@ -486,7 +499,7 @@ export default function ExerciseMusclePage() {
                   Anterior
                 </Button>
                 <span>
-                  Página {page} de {totalPages}
+                  P?gina {page} de {totalPages}
                 </span>
                 <Button
                   variant="outline"
@@ -507,7 +520,7 @@ export default function ExerciseMusclePage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Eliminar</AlertDialogTitle>
               <AlertDialogDescription>
-                ¿Estás seguro de que deseas eliminar esta relación?
+                ?Est?s seguro de que deseas eliminar esta relaci?n?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -520,3 +533,7 @@ export default function ExerciseMusclePage() {
     </div>
   );
 }
+
+
+
+
