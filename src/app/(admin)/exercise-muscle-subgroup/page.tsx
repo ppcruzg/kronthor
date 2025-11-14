@@ -113,7 +113,12 @@ export default function ExerciseMuscleSubgroupPage() {
     ? Math.min(page * PAGE_SIZE, filtered.length)
     : 0;
 
-  const loadRecords = useCallback(async () => {
+const normalizeRelation = <T,>(value: T | T[] | null | undefined): T | undefined => {
+  if (!value) return undefined;
+  return Array.isArray(value) ? value[0] : value;
+};
+
+const loadRecords = useCallback(async () => {
     const { data } = await supabase
       .from("exercise_muscle_subgroup")
       .select(
@@ -132,14 +137,19 @@ export default function ExerciseMuscleSubgroupPage() {
       .order("id", { ascending: true });
 
     setRecords(
-      (data || []).map((item) => ({
-        id: item.id,
-        exercise_id: item.exercise_id,
-        subgroup_id: item.subgroup_id,
-        exercise_name: item.exercise?.name_es ?? "",
-        subgroup_name: item.subgroup?.name ?? "",
-        muscle_group_name: item.subgroup?.group?.name ?? "",
-      }))
+      (data || []).map((item) => {
+        const exercise = normalizeRelation(item.exercise);
+        const subgroup = normalizeRelation(item.subgroup);
+        const group = normalizeRelation(subgroup?.group);
+        return {
+          id: item.id,
+          exercise_id: item.exercise_id,
+          subgroup_id: item.subgroup_id,
+          exercise_name: exercise?.name_es ?? "",
+          subgroup_name: subgroup?.name ?? "",
+          muscle_group_name: group?.name ?? "",
+        };
+      })
     );
   }, []);
 
@@ -153,13 +163,16 @@ export default function ExerciseMuscleSubgroupPage() {
           .order("name"),
       ]);
 
-      setExercises(exerciseList || []);
+      setExercises((exerciseList || []).map(({ id, name_es }) => ({ id, name_es })));
       setSubgroups(
-        (subgroupList || []).map((item) => ({
-          id: item.id,
-          name: item.name,
-          group_name: item.group?.name ?? "",
-        }))
+        (subgroupList || []).map((item) => {
+          const group = normalizeRelation(item.group);
+          return {
+            id: item.id,
+            name: item.name,
+            group_name: group?.name ?? "",
+          };
+        })
       );
     };
 
