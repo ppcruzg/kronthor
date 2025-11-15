@@ -49,11 +49,13 @@ interface ExerciseRecord {
   laterality_id: number | null;
   difficulty_id: number | null;
   training_method_id: number | null;
+  type_id: number | null;
   is_active: boolean;
   plane?: SelectOption | null;
   laterality?: SelectOption | null;
   difficulty_level?: SelectOption | null;
   training_method?: SelectOption | null;
+  exercise_type?: SelectOption | null;
   equipment: SelectOption[];
   patterns: SelectOption[];
   muscles: SelectOption[];
@@ -86,6 +88,7 @@ const schema = z.object({
   laterality_id: z.number().int(),
   difficulty_id: z.number().int(),
   training_method_id: z.number().int(),
+  type_id: z.number().int(),
   equipment_ids: z.array(z.number().int()),
   pattern_ids: z.array(z.number().int()),
   muscle_ids: z.array(z.number().int()),
@@ -101,6 +104,7 @@ export default function ExercisePage() {
   const [lateralities, setLateralities] = useState<SelectOption[]>([]);
   const [difficulties, setDifficulties] = useState<SelectOption[]>([]);
   const [methods, setMethods] = useState<SelectOption[]>([]);
+  const [exerciseTypes, setExerciseTypes] = useState<SelectOption[]>([]);
   const [equipment, setEquipment] = useState<SelectOption[]>([]);
   const [patterns, setPatterns] = useState<SelectOption[]>([]);
   const [muscles, setMuscles] = useState<SelectOption[]>([]);
@@ -127,6 +131,7 @@ export default function ExercisePage() {
       laterality_id: 0,
       difficulty_id: 0,
       training_method_id: 0,
+      type_id: 0,
       equipment_ids: [],
       pattern_ids: [],
       muscle_ids: [],
@@ -142,11 +147,13 @@ export default function ExercisePage() {
     laterality_id: item.laterality_id,
     difficulty_id: item.difficulty_id,
     training_method_id: item.training_method_id,
+    type_id: item.type_id,
     is_active: item.is_active ?? true,
     plane: item.plane,
     laterality: item.laterality,
     difficulty_level: item.difficulty_level,
     training_method: item.training_method,
+    exercise_type: item.exercise_type,
     equipment:
       item.exercise_equipment?.map((row: any) => row.equipment).filter(Boolean) ??
       [],
@@ -172,11 +179,13 @@ export default function ExercisePage() {
           laterality_id,
           difficulty_id,
           training_method_id,
+          type_id,
           is_active,
           plane:plane_id ( id, name ),
           laterality:laterality_id ( id, name ),
           difficulty_level:difficulty_id ( id, name ),
           training_method:training_method_id ( id, name ),
+          exercise_type:type_id ( id, name ),
           exercise_equipment (
             equipment:equipment_id ( id, name )
           ),
@@ -268,6 +277,7 @@ export default function ExercisePage() {
       { data: lateralityData },
       { data: difficultyData },
       { data: methodData },
+      { data: typeData },
       { data: equipmentData },
       { data: patternData },
       { data: muscleData },
@@ -276,6 +286,7 @@ export default function ExercisePage() {
       supabase.from("laterality").select("id, name").order("name"),
       supabase.from("difficulty_level").select("id, name").order("name"),
       supabase.from("training_method").select("id, name").order("name"),
+      supabase.from("exercise_type").select("id, name").order("id"),
       supabase.from("equipment").select("id, name").order("name"),
       supabase.from("movement_pattern").select("id, name").order("name"),
       supabase.from("muscle_group").select("id, name").order("name"),
@@ -285,6 +296,7 @@ export default function ExercisePage() {
     setLateralities(lateralityData || []);
     setDifficulties(difficultyData || []);
     setMethods(methodData || []);
+    setExerciseTypes(typeData || []);
     setEquipment(equipmentData || []);
     setPatterns(patternData || []);
     setMuscles(muscleData || []);
@@ -320,6 +332,7 @@ export default function ExercisePage() {
         difficulty_id: editing.difficulty_id || difficulties[0]?.id || 0,
         training_method_id:
           editing.training_method_id || methods[0]?.id || 0,
+        type_id: editing.type_id || exerciseTypes[0]?.id || 0,
         equipment_ids: editing.equipment.map((eq) => eq.id),
         pattern_ids: editing.patterns.map((pt) => pt.id),
         muscle_ids: editing.muscles.map((ms) => ms.id),
@@ -334,6 +347,7 @@ export default function ExercisePage() {
         laterality_id: lateralities[0]?.id || 0,
         difficulty_id: difficulties[0]?.id || 0,
         training_method_id: methods[0]?.id || 0,
+        type_id: exerciseTypes[0]?.id || 0,
         equipment_ids: [],
         pattern_ids: [],
         muscle_ids: [],
@@ -346,6 +360,7 @@ export default function ExercisePage() {
     lateralities,
     difficulties,
     methods,
+    exerciseTypes,
   ]);
 
   const filtered = useMemo(() => {
@@ -402,6 +417,7 @@ export default function ExercisePage() {
           laterality_id: values.laterality_id,
           difficulty_id: values.difficulty_id,
           training_method_id: values.training_method_id,
+          type_id: values.type_id,
           is_active: values.is_active,
         })
         .eq("id", editing.id)
@@ -432,6 +448,7 @@ export default function ExercisePage() {
           laterality_id: values.laterality_id,
           difficulty_id: values.difficulty_id,
           training_method_id: values.training_method_id,
+          type_id: values.type_id,
           is_active: values.is_active,
         })
         .select()
@@ -521,7 +538,7 @@ export default function ExercisePage() {
               <form className="space-y-14" onSubmit={form.handleSubmit(submit)}>
                 <div className="grid gap-12">
                   <div className="space-y-8">
-                    <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-8 md:grid-cols-2">
                       <div className="grid gap-2">
                         <Label htmlFor="name_es">Nombre (ES)</Label>
                         <Input id="name_es" {...form.register("name_es")} />
@@ -547,6 +564,22 @@ export default function ExercisePage() {
                       <Label htmlFor="is_active" className="text-sm">
                         Activo
                       </Label>
+                    </div>
+
+                    <div className="grid gap-2 w-full md:w-2/5">
+                      <Label htmlFor="type_id" className="font-semibold">Tipo de ejercicio</Label>
+                      <select
+                        id="type_id"
+                        {...form.register("type_id", { valueAsNumber: true })}
+                        className="border px-3 py-2 rounded text-sm"
+                      >
+                        <option value={0}>-- Seleccionar --</option>
+                        {exerciseTypes.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -702,6 +735,7 @@ export default function ExercisePage() {
                   <TableHead>Lateralidad</TableHead>
                   <TableHead>Dificultad</TableHead>
                   <TableHead>Método</TableHead>
+                  <TableHead>Tipo</TableHead>
                   <TableHead>Equipo</TableHead>
                   <TableHead>Patrones</TableHead>
                   <TableHead>Músculos</TableHead>
@@ -722,6 +756,7 @@ export default function ExercisePage() {
                     <TableCell>{item.laterality?.name || "-"}</TableCell>
                     <TableCell>{item.difficulty_level?.name || "-"}</TableCell>
                     <TableCell>{item.training_method?.name || "-"}</TableCell>
+                    <TableCell>{item.exercise_type?.name || "-"}</TableCell>
                     <TableCell>
                       {item.equipment.map((eq) => eq.name).join(", ") || "-"}
                     </TableCell>
