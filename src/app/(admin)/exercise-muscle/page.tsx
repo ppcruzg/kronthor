@@ -183,25 +183,27 @@ export default function ExerciseMusclePage() {
           supabase.from("exercise").select("id, name_es").order("name_es"),
           supabase
             .from("muscle")
-            .select("id, name, subgroup:subgroup_id ( id, name, group:group_id ( id, name ) )")
+            .select("id, name")
             .order("name"),
         ]);
 
       if (exerciseError || muscleError) {
-        toast.error("No se pudieron cargar los cat?logos");
+        toast.error("No se pudieron cargar los catálogos");
+        console.error("Exercise Error:", exerciseError, "Muscle Error:", muscleError);
         return;
       }
+
+      console.log("Exercises loaded:", exerciseList);
+      console.log("Muscles loaded:", muscleList);
 
       setExercises((exerciseList || []).map(({ id, name_es }) => ({ id, name_es })));
       setMuscles(
         (muscleList || []).map((item) => {
-          const subgroup = normalizeRelation(item.subgroup);
-          const group = normalizeRelation(subgroup?.group);
           return {
             id: item.id,
             name: item.name,
-            subgroup_name: subgroup?.name ?? "",
-            group_name: group?.name ?? "",
+            subgroup_name: "",
+            group_name: "",
           };
         })
       );
@@ -358,6 +360,7 @@ export default function ExerciseMusclePage() {
                       {...form.register("exercise_id")}
                       className="border px-3 py-2 rounded text-sm"
                     >
+                      <option value="">-- Seleccionar ejercicio --</option>
                       {exercises.map((exercise) => (
                         <option key={exercise.id} value={exercise.id}>
                           {exercise.name_es}
@@ -372,6 +375,7 @@ export default function ExerciseMusclePage() {
                       {...form.register("muscle_id", { valueAsNumber: true })}
                       className="border px-3 py-2 rounded text-sm"
                     >
+                      <option value={0}>-- Seleccionar musculo --</option>
                       {muscles.map((muscle) => (
                         <option key={muscle.id} value={muscle.id}>
                           {`${muscle.name}${

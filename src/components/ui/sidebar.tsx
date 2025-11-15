@@ -33,6 +33,7 @@ interface NavItem {
   href: string;
   label: string;
   icon: React.ReactNode;
+  phase?: number;
 }
 
 type NavSection =
@@ -41,11 +42,13 @@ type NavSection =
       href: string;
       label: string;
       icon: React.ReactNode;
+      phase?: number;
     }
   | {
       type: 'group';
       label: string;
       icon: React.ReactNode;
+      phase?: number;
       items: NavItem[];
     };
 
@@ -61,14 +64,15 @@ const navSections: NavSection[] = [
     type: 'group',
     label: 'Ejercicios',
     icon: <Dumbbell />,
+    phase: 3,
     items: [
-      { href: '/exercise', label: 'Ejercicios', icon: <Dumbbell /> },
-      { href: '/training-method', label: 'Metodos de entrenamiento', icon: <Activity /> },
-      { href: '/difficulty-level', label: 'Niveles de dificultad', icon: <Gauge /> },
-      { href: '/movement-pattern', label: 'Patrones de movimiento', icon: <Workflow /> },
-      { href: '/exercise-movement-pattern', label: 'Ejercicio + Patron', icon: <GitBranch /> },
-      { href: '/equipment', label: 'Equipamiento', icon: <Package /> },
-      { href: '/exercise-equipment', label: 'Ejercicio + Equipamiento', icon: <Wrench /> },
+      { href: '/exercise', label: 'Ejercicios', icon: <Dumbbell />, phase: 11 },
+      { href: '/training-method', label: 'Metodos de entrenamiento', icon: <Activity />, phase: 10 },
+      { href: '/difficulty-level', label: 'Niveles de dificultad', icon: <Gauge />, phase: 4 },
+      { href: '/movement-pattern', label: 'Patrones de movimiento', icon: <Workflow />, phase: 2 },
+      { href: '/exercise-movement-pattern', label: 'Ejercicio + Patron', icon: <GitBranch />, phase: 13 },
+      { href: '/equipment', label: 'Equipamiento', icon: <Package />, phase: 5 },
+      { href: '/exercise-equipment', label: 'Ejercicio + Equipamiento', icon: <Wrench />, phase: 12 },
     ],
   },
 
@@ -76,12 +80,13 @@ const navSections: NavSection[] = [
     type: 'group',
     label: 'Musculos',
     icon: <Network />,
+    phase: 2,
     items: [
-      { href: '/muscle-group', label: 'Grupos musculares', icon: <Layers /> },
-      { href: '/muscle-subgroup', label: 'Subgrupos musculares', icon: <SplitSquareHorizontal /> },
-      { href: '/muscle', label: 'Musculos', icon: <Drumstick /> },
-      { href: '/exercise-muscle-subgroup', label: 'Ejercicio + Subgrupo', icon: <GitMerge /> },
-      { href: '/exercise-muscle', label: 'Ejercicio + Musculo', icon: <Link2 /> },
+      { href: '/muscle-group', label: 'Grupos musculares', icon: <Layers />, phase: 1 },
+      { href: '/muscle-subgroup', label: 'Subgrupos musculares', icon: <SplitSquareHorizontal />, phase: 7 },
+      { href: '/muscle', label: 'Musculos', icon: <Drumstick />, phase: 8 },
+      { href: '/exercise-muscle-subgroup', label: 'Ejercicio + Subgrupo', icon: <GitMerge />, phase: 15 },
+      { href: '/exercise-muscle', label: 'Ejercicio + Musculo', icon: <Link2 />, phase: 14 },
     ],
   },
 
@@ -89,9 +94,10 @@ const navSections: NavSection[] = [
     type: 'group',
     label: 'Estructura Fisica',
     icon: <Brain />,
+    phase: 4,
     items: [
-      { href: '/physical-capability', label: 'Capacidades', icon: <Medal /> },
-      { href: '/physical-subcapability', label: 'Subcapacidades', icon: <Puzzle /> },
+      { href: '/physical-capability', label: 'Capacidades', icon: <Medal />, phase: 6 },
+      { href: '/physical-subcapability', label: 'Subcapacidades', icon: <Puzzle />, phase: 9 },
     ],
   },
 ];
