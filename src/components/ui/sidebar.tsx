@@ -83,7 +83,6 @@ const navSections: NavSection[] = [
     phase: 2,
     items: [
       { href: '/muscle-group', label: 'Grupos musculares', icon: <Layers />, phase: 1 },
-      { href: '/muscle-subgroup', label: 'Subgrupos musculares', icon: <SplitSquareHorizontal />, phase: 7 },
       { href: '/muscle', label: 'Musculos', icon: <Drumstick />, phase: 8 },
       { href: '/exercise-muscle-subgroup', label: 'Ejercicio + Subgrupo', icon: <GitMerge />, phase: 15 },
       { href: '/exercise-muscle', label: 'Ejercicio + Musculo', icon: <Link2 />, phase: 14 },

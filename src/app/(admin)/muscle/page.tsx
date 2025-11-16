@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -38,6 +38,40 @@ import {
 } from "@/components/ui/table";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
+interface MuscleGroup {
+  id: number;
+  name: string;
+}
+
+interface MuscleRecord {
+  id: number;
+  name: string;
+  group_id: number;
+  group_name: string;
+}
+
+type SupabaseMuscle = {
+  id: number;
+  name: string;
+  group_id: number;
+  muscle_group?: MuscleGroup | MuscleGroup[] | null;
+};
+
+const normalizeRelation = <T,>(value: T | T[] | null | undefined): T | undefined => {
+  if (!value) return undefined;
+  return Array.isArray(value) ? value[0] : value;
+};
+
+const mapRecord = (item: SupabaseMuscle): MuscleRecord => {
+  const group = normalizeRelation(item.muscle_group);
+  return {
+    id: item.id,
+    name: item.name,
+    group_id: item.group_id ?? group?.id ?? 0,
+    group_name: group?.name ?? "Sin grupo",
+  };
+};
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -46,35 +80,16 @@ const supabase = createClient(
 const schema = z.object({
   id: z.number().int().positive().optional(),
   name: z.string().min(2, "Requerido"),
-  subgroup_id: z.number().int(),
+  group_id: z.number().int().min(1, "Selecciona un grupo muscular"),
 });
 
 type FormValues = z.infer<typeof schema>;
 
-interface SubgroupOption {
-  id: number;
-  name: string;
-  group_name: string;
-}
-
-interface MuscleRecord {
-  id: number;
-  name: string;
-  subgroup_id: number;
-  subgroup_name: string;
-  muscle_group_name: string;
-}
-
-const normalizeRelation = <T,>(value: T | T[] | null | undefined): T | undefined => {
-  if (!value) return undefined;
-  return Array.isArray(value) ? value[0] : value;
-};
-
 const PAGE_SIZE = 10;
 
-export default function MusclePage() {
+export default function MuscleCatalogPage() {
   const [records, setRecords] = useState<MuscleRecord[]>([]);
-  const [subgroups, setSubgroups] = useState<SubgroupOption[]>([]);
+  const [groups, setGroups] = useState<MuscleGroup[]>([]);
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<MuscleRecord | null>(null);
   const [open, setOpen] = useState(false);
@@ -83,19 +98,70 @@ export default function MusclePage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      name: "",
-      subgroup_id: 0,
-    },
+    defaultValues: { name: "", group_id: 0 },
   });
+
+  useEffect(() => {
+    const fetchAll = async () => {
+      const [{ data: groupData, error: groupError }, { data: muscleData, error: muscleError }] =
+        await Promise.all([
+          supabase.from("muscle_group").select("id, name").order("name", { ascending: true }),
+          supabase
+            .from("muscle")
+            .select(
+              `
+              id,
+              name,
+              group_id,
+              muscle_group:group_id (
+                id,
+                name
+              )
+            `
+            )
+            .order("name", { ascending: true }),
+        ]);
+
+      if (groupError) {
+        toast.error("No se pudieron cargar los grupos musculares.");
+      } else {
+        setGroups(groupData ?? []);
+      }
+
+      if (muscleError) {
+        toast.error("No se pudieron cargar los musculos.");
+      } else {
+        setRecords((muscleData ?? []).map((item) => mapRecord(item as SupabaseMuscle)));
+      }
+    };
+
+    fetchAll();
+  }, []);
+
+  const handleDialogChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) {
+      setEditing(null);
+    }
+  };
+
+  const handleNew = () => {
+    if (!groups.length) {
+      toast.error("Crea primero al menos un grupo muscular.");
+      return;
+    }
+    setEditing(null);
+    form.reset({ name: "", group_id: groups[0].id });
+    setOpen(true);
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return records.filter((item) =>
-      !q ||
-      item.name.toLowerCase().includes(q) ||
-      item.subgroup_name.toLowerCase().includes(q) ||
-      item.muscle_group_name.toLowerCase().includes(q)
+    return records.filter(
+      (item) =>
+        !q ||
+        item.name.toLowerCase().includes(q) ||
+        item.group_name.toLowerCase().includes(q)
     );
   }, [records, query]);
 
@@ -106,198 +172,139 @@ export default function MusclePage() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const rangeStart = filtered.length ? (page - 1) * PAGE_SIZE + 1 : 0;
-  const rangeEnd = filtered.length
-    ? Math.min(page * PAGE_SIZE, filtered.length)
-    : 0;
-
-  const loadRecords = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("muscle")
-      .select(
-        `
-        id,
-        name,
-        subgroup_id,
-        subgroup:subgroup_id (
-          id,
-          name,
-          group:group_id ( id, name )
-        )
-      `
-      )
-      .order("name", { ascending: true });
-
-    if (error) {
-      toast.error("No se pudieron obtener los musculos");
-      return;
-    }
-
-    setRecords(
-      (data || []).map((item) => {
-        const subgroup = normalizeRelation(item.subgroup);
-        const group = normalizeRelation(subgroup?.group);
-        return {
-          id: item.id,
-          name: item.name,
-          subgroup_id: item.subgroup_id,
-          subgroup_name: subgroup?.name ?? "",
-          muscle_group_name: group?.name ?? "",
-        };
-      })
-    );
-  }, []);
-
-  useEffect(() => {
-    const loadSubgroups = async () => {
-      const { data, error } = await supabase
-        .from("muscle_subgroup")
-        .select("id, name, group:group_id ( id, name )")
-        .order("name");
-
-      if (error) {
-        toast.error("No se pudieron cargar los subgrupos");
-        return;
-      }
-
-      setSubgroups(
-        (data || []).map((item) => {
-          const group = normalizeRelation(item.group);
-          return {
-            id: item.id,
-            name: item.name,
-            group_name: group?.name ?? "",
-          };
-        })
-      );
-    };
-
-    loadSubgroups();
-    loadRecords();
-  }, [loadRecords]);
-
-  useEffect(() => {
-    if (editing) {
-      form.reset({
-        id: editing.id,
-        name: editing.name,
-        subgroup_id: editing.subgroup_id,
-      });
-    } else {
-      form.reset({
-        name: "",
-        subgroup_id: subgroups[0]?.id ?? 0,
-      });
-    }
-  }, [editing, form, subgroups]);
+  const rangeEnd = filtered.length ? Math.min(page * PAGE_SIZE, filtered.length) : 0;
 
   useEffect(() => {
     setPage(1);
   }, [query]);
 
   useEffect(() => {
-    setPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
+    setPage((prev) => {
+      const lastPage = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+      return Math.min(prev, lastPage);
+    });
+  }, [filtered.length]);
 
   const submit = async (values: FormValues) => {
-    if (editing?.id) {
-      const { error } = await supabase
+    if (editing) {
+      const { data, error } = await supabase
         .from("muscle")
-        .update({ name: values.name, subgroup_id: values.subgroup_id })
-        .eq("id", editing.id);
+        .update({ name: values.name, group_id: values.group_id })
+        .eq("id", editing.id)
+        .select(
+          `
+          id,
+          name,
+          group_id,
+          muscle_group:group_id (
+            id,
+            name
+          )
+        `
+        )
+        .single();
 
       if (error) {
-        toast.error("Error al actualizar");
+        toast.error("No se pudo actualizar el musculo.");
         return;
       }
 
-      toast.success("M�sculo actualizado");
+      const updated = mapRecord(data as SupabaseMuscle);
+      setRecords((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      toast.success("Musculo actualizado.");
     } else {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("muscle")
-        .insert({ name: values.name, subgroup_id: values.subgroup_id });
+        .insert({ name: values.name, group_id: values.group_id })
+        .select(
+          `
+          id,
+          name,
+          group_id,
+          muscle_group:group_id (
+            id,
+            name
+          )
+        `
+        )
+        .single();
 
       if (error) {
-        toast.error("Error al crear");
+        toast.error("No se pudo crear el musculo.");
         return;
       }
 
-      toast.success("M�sculo creado");
+      const created = mapRecord(data as SupabaseMuscle);
+      setRecords((prev) => [created, ...prev]);
+      toast.success("Musculo creado.");
     }
 
-    await loadRecords();
     setOpen(false);
     setEditing(null);
   };
 
   const onDelete = async () => {
     if (!toDelete) return;
-
     const { error } = await supabase.from("muscle").delete().eq("id", toDelete.id);
 
     if (error) {
-      toast.error("No se pudo eliminar");
+      toast.error("No se pudo eliminar el musculo.");
       return;
     }
 
-    toast.success("M�sculo eliminado");
     setRecords((prev) => prev.filter((item) => item.id !== toDelete.id));
+    toast.success("Musculo eliminado.");
     setToDelete(null);
   };
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto max-w-6xl space-y-6">
+      <div className="mx-auto max-w-4xl space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">M�sculos</h1>
+            <h1 className="text-2xl font-bold">Musculos</h1>
             <p className="text-muted-foreground">
-              Administra el cat�logo maestro de m�sculos.
+              Administra el catalogo de musculos y su grupo correspondiente.
             </p>
           </div>
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={handleDialogChange}>
             <DialogTrigger asChild>
-              <Button
-                onClick={() => {
-                  setEditing(null);
-                  setOpen(true);
-                }}
-              >
+              <Button onClick={handleNew}>
                 <Plus className="mr-2 h-4 w-4" />
                 Nuevo
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-xl md:max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <DialogContent>
               <DialogHeader>
-                <DialogTitle>{editing ? "Editar m�sculo" : "Nuevo m�sculo"}</DialogTitle>
+                <DialogTitle>{editing ? "Editar musculo" : "Nuevo musculo"}</DialogTitle>
                 <DialogDescription>
-                  Completa la informaci�n del m�sculo.
+                  Completa los campos para guardar el registro.
                 </DialogDescription>
               </DialogHeader>
-              <form className="space-y-6" onSubmit={form.handleSubmit(submit)}>
-                <div className="grid gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="name">Nombre</Label>
-                    <Input id="name" {...form.register("name")} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="subgroup_id">Subgrupo muscular</Label>
-                    <select
-                      id="subgroup_id"
-                      {...form.register("subgroup_id", { valueAsNumber: true })}
-                      className="border px-3 py-2 rounded text-sm"
-                    >
-                      {subgroups.map((option) => (
-                        <option key={option.id} value={option.id}>
-                          {`${option.name}${option.group_name ? ` (${option.group_name})` : ""}`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+              <form className="space-y-4" onSubmit={form.handleSubmit(submit)}>
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Nombre</Label>
+                  <Input id="name" {...form.register("name")} />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="group_id">Grupo muscular</Label>
+                  <select
+                    id="group_id"
+                    {...form.register("group_id", { valueAsNumber: true })}
+                    className="border px-3 py-2 rounded text-sm"
+                  >
+                    {groups.map((group) => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
-                  <Button variant="outline" onClick={() => setOpen(false)}>
+                  <Button variant="outline" type="button" onClick={() => setOpen(false)}>
                     Cancelar
                   </Button>
                   <Button type="submit">Guardar</Button>
@@ -310,11 +317,11 @@ export default function MusclePage() {
         {/* Search */}
         <Card>
           <CardHeader>
-            <CardTitle>B�squeda</CardTitle>
+            <CardTitle>Busqueda</CardTitle>
           </CardHeader>
           <CardContent>
             <Input
-              placeholder="Buscar por m�sculo, subgrupo o grupo"
+              placeholder="Buscar por musculo o grupo"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -330,8 +337,8 @@ export default function MusclePage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>M�sculo</TableHead>
-                  <TableHead>Subgrupo</TableHead>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Musculo</TableHead>
                   <TableHead>Grupo muscular</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -339,9 +346,9 @@ export default function MusclePage() {
               <TableBody>
                 {paginated.map((item) => (
                   <TableRow key={item.id}>
+                    <TableCell>{item.id}</TableCell>
                     <TableCell>{item.name}</TableCell>
-                    <TableCell>{item.subgroup_name}</TableCell>
-                    <TableCell>{item.muscle_group_name || "-"}</TableCell>
+                    <TableCell>{item.group_name}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
                         <Button
@@ -349,6 +356,11 @@ export default function MusclePage() {
                           size="icon"
                           onClick={() => {
                             setEditing(item);
+                            form.reset({
+                              id: item.id,
+                              name: item.name,
+                              group_id: item.group_id,
+                            });
                             setOpen(true);
                           }}
                         >
@@ -388,7 +400,7 @@ export default function MusclePage() {
                   Anterior
                 </Button>
                 <span>
-                  P�gina {page} de {totalPages}
+                  Pagina {page} de {totalPages}
                 </span>
                 <Button
                   variant="outline"
@@ -409,7 +421,7 @@ export default function MusclePage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Eliminar</AlertDialogTitle>
               <AlertDialogDescription>
-                �Est�s seguro de que deseas eliminar "{toDelete?.name}"?
+                Estas seguro de que deseas eliminar "{toDelete?.name}"?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -422,7 +434,3 @@ export default function MusclePage() {
     </div>
   );
 }
-
-
-
-
