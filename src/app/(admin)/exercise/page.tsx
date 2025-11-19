@@ -23,7 +23,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Search, Plus, Dumbbell, CheckCircle, XCircle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Search, Plus, Dumbbell, CheckCircle, XCircle, Edit, Trash } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -44,6 +55,11 @@ interface Exercise {
   name_en: string | null;
   description: string | null;
   urlvideo: string | null;
+  laterality_id: number | null;
+  difficulty_id: number | null;
+  plane_id: number | null;
+  type_id: number | null;
+  training_method_id: number | null;
 
   // Joins de uno a uno
   laterality: { name: string } | null;
@@ -61,6 +77,7 @@ interface Exercise {
   }[];
   exercise_equipment: {
     equipment: {
+      id: number;
       name: string;
     };
   }[];
@@ -106,7 +123,7 @@ export default function ExercisesCatalog() {
             muscle!inner (name)
           ),
           exercise_equipment (
-            equipment!inner (name)
+            equipment!inner (id, name)
           ),
           exercise_movement_pattern!exercise_movement_pattern_exercise_id_fkey (
             movement_pattern!inner (name)
@@ -126,6 +143,11 @@ export default function ExercisesCatalog() {
         name_en: ex.name_en ?? ex.name_es,
         description: ex.description,
         urlvideo: ex.urlvideo ?? null,
+        laterality_id: ex.laterality_id,
+        difficulty_id: ex.difficulty_id,
+        plane_id: ex.plane_id,
+        type_id: ex.type_id,
+        training_method_id: ex.training_method_id,
         laterality: ex.laterality,
         difficulty: ex.difficulty,
         plane: ex.plane,
@@ -162,6 +184,15 @@ export default function ExercisesCatalog() {
   }, [filtered, page]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+
+  const handleDelete = async (id: number) => {
+    const { error } = await supabase.from('exercise').delete().eq('id', id);
+    if (error) {
+      console.error("Error deleting exercise:", error);
+    } else {
+      setExercises(prev => prev.filter(ex => ex.id !== id));
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -351,9 +382,28 @@ export default function ExercisesCatalog() {
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button asChild size="sm">
-                              <Link href={`/ejercicios/${ex.id}`}>Ver detalle →</Link>
-                            </Button>
+                            <CreateExerciseDialog editData={ex} />
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button size="sm" variant="destructive">
+                                  <Trash className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta acción no se puede deshacer. Esto eliminará permanentemente el ejercicio "{ex.name_es}".
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(ex.id)}>
+                                    Eliminar
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </TableCell>
                         </TableRow>
                       );
@@ -398,7 +448,12 @@ export default function ExercisesCatalog() {
   );
 }
 
-function CreateExerciseDialog() {
+interface CreateExerciseDialogProps {
+  editData?: Exercise;
+}
+
+function CreateExerciseDialog({ editData }: CreateExerciseDialogProps) {
+  const isEdit = !!editData;
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     name_es: "",
@@ -421,83 +476,179 @@ function CreateExerciseDialog() {
 
   useEffect(() => {
     const fetchOptions = async () => {
-      const [planesData, lateralitiesData, typesData, difficultiesData, trainingMethodsData, equipmentsData] = await Promise.all([
-        supabase.from("plane").select("id, name"),
-        supabase.from("laterality").select("id, name"),
-        supabase.from("exercise_type").select("id, name"),
-        supabase.from("difficulty_level").select("id, name"),
-        supabase.from("training_method").select("id, name"),
-        supabase.from("equipment").select("id, name"),
-      ]);
+      try {
+        const planesRes = await supabase.from("plane").select("id, name");
+        const lateralitiesRes = await supabase.from("laterality").select("id, name");
+        const typesRes = await supabase.from("exercise_type").select("id, name");
+        const difficultiesRes = await supabase.from("difficulty_level").select("id, name");
+        const trainingMethodsRes = await supabase.from("training_method").select("id, name");
+        const equipmentsRes = await supabase.from("equipment").select("id, name");
 
-      setPlanes(planesData.data || []);
-      setLateralities(lateralitiesData.data || []);
-      setTypes(typesData.data || []);
-      setDifficulties(difficultiesData.data || []);
-      setTrainingMethods(trainingMethodsData.data || []);
-      setEquipments(equipmentsData.data || []);
+        if (planesRes.error) console.error("Error fetching planes:", planesRes.error);
+        if (lateralitiesRes.error) console.error("Error fetching lateralities:", lateralitiesRes.error);
+        if (typesRes.error) console.error("Error fetching types:", typesRes.error);
+        if (difficultiesRes.error) console.error("Error fetching difficulties:", difficultiesRes.error);
+        if (trainingMethodsRes.error) console.error("Error fetching training methods:", trainingMethodsRes.error);
+        if (equipmentsRes.error) console.error("Error fetching equipments:", equipmentsRes.error);
+
+        setPlanes(planesRes.data || []);
+        setLateralities(lateralitiesRes.data || []);
+        setTypes(typesRes.data || []);
+        setDifficulties(difficultiesRes.data || []);
+        setTrainingMethods(trainingMethodsRes.data || []);
+        setEquipments(equipmentsRes.data || []);
+      } catch (error) {
+        console.error('Fetch options error:', error);
+        setPlanes([]);
+        setLateralities([]);
+        setTypes([]);
+        setDifficulties([]);
+        setTrainingMethods([]);
+        setEquipments([]);
+      }
     };
     fetchOptions();
   }, []);
 
+  // Initialize form data when editData changes
+  useEffect(() => {
+    if (editData) {
+      const equipmentId = editData.exercise_equipment?.[0]?.equipment?.id?.toString() || "";
+      setFormData({
+        name_es: editData.name_es || "",
+        name_en: editData.name_en || "",
+        urlvideo: editData.urlvideo || "",
+        plane_id: editData.plane_id?.toString() || "",
+        laterality_id: editData.laterality_id?.toString() || "",
+        type_id: editData.type_id?.toString() || "",
+        difficulty_id: editData.difficulty_id?.toString() || "",
+        training_method_id: editData.training_method_id?.toString() || "",
+        equipment_id: equipmentId,
+      });
+    } else {
+      setFormData({
+        name_es: "",
+        name_en: "",
+        urlvideo: "",
+        plane_id: "",
+        laterality_id: "",
+        type_id: "",
+        difficulty_id: "",
+        training_method_id: "",
+        equipment_id: "",
+      });
+    }
+  }, [editData]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { name_es, name_en, urlvideo, plane_id, laterality_id, type_id, difficulty_id, training_method_id, equipment_id } = formData;
-    const response = await supabase.from("exercise").insert({
-      name_es,
-      name_en: name_en || null,
-      urlvideo: urlvideo || undefined,
-      plane_id: plane_id ? parseInt(plane_id) : undefined,
-      laterality_id: laterality_id ? parseInt(laterality_id) : undefined,
-      type_id: type_id ? parseInt(type_id) : undefined,
-      difficulty_id: difficulty_id ? parseInt(difficulty_id) : undefined,
-      training_method_id: training_method_id ? parseInt(training_method_id) : undefined,
-    });
-    const { data, error } = response as { data: any[] | null; error: any };
 
-    if (error) {
-      console.error("Error creating exercise:", error);
-      setLoading(false);
-      return;
+    const { name_es, name_en, urlvideo, plane_id, laterality_id, type_id, difficulty_id, training_method_id, equipment_id } = formData;
+
+    if (isEdit && editData) {
+      // Update existing exercise
+      const { error } = await supabase
+        .from("exercise")
+        .update({
+          name_es,
+          name_en: name_en || null,
+          urlvideo: urlvideo || undefined,
+          plane_id: plane_id ? parseInt(plane_id) : undefined,
+          laterality_id: laterality_id ? parseInt(laterality_id) : undefined,
+          type_id: type_id ? parseInt(type_id) : undefined,
+          difficulty_id: difficulty_id ? parseInt(difficulty_id) : undefined,
+          training_method_id: training_method_id ? parseInt(training_method_id) : undefined,
+        })
+        .eq('id', editData.id);
+
+      if (error) {
+        console.error("Error updating exercise:", error);
+        setLoading(false);
+        return;
+      }
+
+      // Handle equipment update
+      if (equipment_id) {
+        await supabase.from("exercise_equipment").delete().eq("exercise_id", editData.id);
+        await supabase.from("exercise_equipment").insert({
+          exercise_id: editData.id,
+          equipment_id: parseInt(equipment_id),
+        });
+      }
+    } else {
+      // Create new exercise
+      const { data, error } = await supabase.from("exercise").insert({
+        name_es,
+        name_en: name_en || null,
+        urlvideo: urlvideo || undefined,
+        plane_id: plane_id ? parseInt(plane_id) : undefined,
+        laterality_id: laterality_id ? parseInt(laterality_id) : undefined,
+        type_id: type_id ? parseInt(type_id) : undefined,
+        difficulty_id: difficulty_id ? parseInt(difficulty_id) : undefined,
+        training_method_id: training_method_id ? parseInt(training_method_id) : undefined,
+      });
+
+      if (error) {
+        console.error("Error creating exercise:", error);
+        setLoading(false);
+        return;
+      }
+
+      if (data && data[0] && equipment_id) {
+        const exerciseId = (data[0] as { id: number }).id;
+        await supabase.from("exercise_equipment").insert({
+          exercise_id: exerciseId,
+          equipment_id: parseInt(equipment_id),
+        });
+      }
     }
 
-    if (data && (data as any)[0] && equipment_id) {
-      const exerciseId = (data as any)[0].id;
-      await supabase.from("exercise_equipment").insert({
-        exercise_id: exerciseId,
-        equipment_id: parseInt(equipment_id),
+    setLoading(false);
+    setOpen(false);
+
+    // Reset form only for create mode
+    if (!isEdit) {
+      setFormData({
+        name_es: "",
+        name_en: "",
+        urlvideo: "",
+        plane_id: "",
+        laterality_id: "",
+        type_id: "",
+        difficulty_id: "",
+        training_method_id: "",
+        equipment_id: "",
       });
     }
 
-    setOpen(false);
-    setFormData({
-      name_es: "",
-      name_en: "",
-      urlvideo: "",
-      plane_id: "",
-      laterality_id: "",
-      type_id: "",
-      difficulty_id: "",
-      training_method_id: "",
-      equipment_id: "",
-    });
     window.location.reload(); // Simple refresh
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo ejercicio
-        </Button>
+        {isEdit ? (
+          <Button size="sm" variant="outline" className="mr-2">
+            <Edit className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo ejercicio
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-screen-lg">
         <DialogHeader>
-          <DialogTitle>Crear nuevo ejercicio</DialogTitle>
+          <DialogTitle>
+            {isEdit ? "Editar ejercicio" : "Crear nuevo ejercicio"}
+          </DialogTitle>
           <DialogDescription>
-            Completa los campos para crear un nuevo ejercicio.
+            {isEdit
+              ? "Modifica los campos para actualizar el ejercicio."
+              : "Completa los campos para crear un nuevo ejercicio."
+            }
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -528,7 +679,7 @@ function CreateExerciseDialog() {
           </div>
           <div>
             <Label htmlFor="plane">Plano</Label>
-            <Select onValueChange={(value) => setFormData({ ...formData, plane_id: value })}>
+            <Select value={formData.plane_id} onValueChange={(value) => setFormData({ ...formData, plane_id: value })}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar plano" />
               </SelectTrigger>
@@ -543,7 +694,7 @@ function CreateExerciseDialog() {
           </div>
           <div>
             <Label htmlFor="laterality">Lateralidad</Label>
-            <Select onValueChange={(value) => setFormData({ ...formData, laterality_id: value })}>
+            <Select value={formData.laterality_id} onValueChange={(value) => setFormData({ ...formData, laterality_id: value })}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar lateralidad" />
               </SelectTrigger>
@@ -558,7 +709,7 @@ function CreateExerciseDialog() {
           </div>
           <div>
             <Label htmlFor="type">Tipo</Label>
-            <Select onValueChange={(value) => setFormData({ ...formData, type_id: value })}>
+            <Select value={formData.type_id} onValueChange={(value) => setFormData({ ...formData, type_id: value })}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar tipo" />
               </SelectTrigger>
@@ -573,7 +724,7 @@ function CreateExerciseDialog() {
           </div>
           <div>
             <Label htmlFor="difficulty">Dificultad</Label>
-            <Select onValueChange={(value) => setFormData({ ...formData, difficulty_id: value })}>
+            <Select value={formData.difficulty_id} onValueChange={(value) => setFormData({ ...formData, difficulty_id: value })}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar dificultad" />
               </SelectTrigger>
@@ -588,7 +739,7 @@ function CreateExerciseDialog() {
           </div>
           <div>
             <Label htmlFor="training_method">Método de Entrenamiento</Label>
-            <Select onValueChange={(value) => setFormData({ ...formData, training_method_id: value })}>
+            <Select value={formData.training_method_id} onValueChange={(value) => setFormData({ ...formData, training_method_id: value })}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar método" />
               </SelectTrigger>
@@ -603,7 +754,7 @@ function CreateExerciseDialog() {
           </div>
           <div>
             <Label htmlFor="equipment">Equipamiento</Label>
-            <Select onValueChange={(value) => setFormData({ ...formData, equipment_id: value })}>
+            <Select value={formData.equipment_id} onValueChange={(value) => setFormData({ ...formData, equipment_id: value })}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar equipamiento" />
               </SelectTrigger>
@@ -618,7 +769,7 @@ function CreateExerciseDialog() {
           </div>
           <div className="md:col-span-2">
             <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Guardando..." : "Crear ejercicio"}
+              {loading ? "Guardando..." : (isEdit ? "Actualizar ejercicio" : "Crear ejercicio")}
             </Button>
           </div>
         </form>
