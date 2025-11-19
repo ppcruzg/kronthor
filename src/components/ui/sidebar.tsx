@@ -55,7 +55,7 @@ type NavSection =
 const navSections: NavSection[] = [
   {
     type: 'item',
-    href: '/admin',
+    href: '/dash',
     label: 'Dashboard',
     icon: <LayoutDashboard />,
   },
@@ -82,10 +82,10 @@ const navSections: NavSection[] = [
     icon: <Network />,
     phase: 2,
     items: [
+      { href: '/exercise-muscle', label: 'Ejercicio + Musculo', icon: <Link2 />, phase: 14 },
       { href: '/muscle-group', label: 'Grupos musculares', icon: <Layers />, phase: 1 },
       { href: '/muscle', label: 'Musculos', icon: <Drumstick />, phase: 8 },
-      { href: '/exercise-muscle-subgroup', label: 'Ejercicio + Subgrupo', icon: <GitMerge />, phase: 15 },
-      { href: '/exercise-muscle', label: 'Ejercicio + Musculo', icon: <Link2 />, phase: 14 },
+      
     ],
   },
 

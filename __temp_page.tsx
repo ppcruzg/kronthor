@@ -1,4 +1,4 @@
-ï»¿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
@@ -74,14 +74,34 @@ interface ExerciseMuscleRecord {
   group_name: string;
 }
 
-interface MuscleGroup {
+type MuscleGroup = {
   id: number;
   name: string;
-}
+};
 
 const normalizeRelation = <T,>(value: T | T[] | null | undefined): T | undefined => {
   if (!value) return undefined;
   return Array.isArray(value) ? value[0] : value;
+};
+
+const mapRecord = (item: any): ExerciseMuscleRecord => {
+  const exercise = normalizeRelation(item.exercise) as { id?: string; name?: string } | undefined;
+  const muscle = normalizeRelation(item.muscle) as {
+    id?: number;
+    name?: string;
+    group?: MuscleGroup | MuscleGroup[] | null;
+  } | undefined;
+  const group = normalizeRelation(muscle?.group) as MuscleGroup | undefined;
+
+  return {
+    id: item.id,
+    role: (item.role as "primary" | "secondary") ?? "primary",
+    exercise_id: exercise?.id ?? "",
+    exercise_name: exercise?.name ?? "",
+    muscle_id: muscle?.id ?? 0,
+    muscle_name: muscle?.name ?? "",
+    group_name: group?.name ?? "",
+  };
 };
 
 const PAGE_SIZE = 10;
@@ -89,6 +109,34 @@ const ROLE_OPTIONS = [
   { value: "primary", label: "Primario" },
   { value: "secondary", label: "Secundario" },
 ];
+
+const RECORD_SELECT = `
+    id,
+    role,
+    exercise:exercise_id ( id, name ),
+    muscle:muscle_id (
+        id,
+        name,
+        group:group_id (
+            id,
+            name
+        )
+    )
+  `;
+
+const FALLBACK_RECORD_SELECT = `
+    id,
+    role,
+    exercise:exercise_id ( id, name:name_es ),
+    muscle:muscle_id (
+        id,
+        name,
+        group:group_id (
+            id,
+            name
+        )
+    )
+  `;
 
 export default function ExerciseMusclePage() {
   const [records, setRecords] = useState<ExerciseMuscleRecord[]>([]);
@@ -130,102 +178,100 @@ export default function ExerciseMusclePage() {
   const rangeStart = filtered.length ? (page - 1) * PAGE_SIZE + 1 : 0;
   const rangeEnd = filtered.length ? Math.min(page * PAGE_SIZE, filtered.length) : 0;
 
-  const mapRecord = (item: any): ExerciseMuscleRecord => {
-    const exercise = normalizeRelation(item.exercise);
-    const muscle = normalizeRelation(item.muscle);
-    const group = normalizeRelation(muscle?.group);
-
-    return {
-      id: item.id,
-      role: (item.role as "primary" | "secondary") ?? "primary",
-      exercise_id: exercise?.id ?? "",
-      exercise_name: exercise?.name_es ?? exercise?.name ?? "",
-      muscle_id: muscle?.id ?? 0,
-      muscle_name: muscle?.name ?? "",
-      group_name: group?.name ?? "",
-    };
-  };
-
   const loadRecords = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("exercise_muscle")
-      .select(`
-    id,
-    role,
-    exercise:exercise_id ( id, name_es ),
-    muscle:muscle_id (
-        id,
-        name,
-        group:group_id (
-            id,
-            name
-        )
-    )
-  `)
-      .order("id", { ascending: true });
+    const fetchRecords = async (selectQuery: string) =>
+      supabase
+        .from("exercise_muscle")
+        .select(selectQuery)
+        .order("id", { ascending: true });
+
+    const { data, error } = await fetchRecords(RECORD_SELECT);
 
     if (error) {
-      toast.error("No se pudieron cargar las relaciones");
-      console.error("Load error:", error);
+      const { data: fallbackData, error: fallbackError } = await fetchRecords(FALLBACK_RECORD_SELECT);
+      if (fallbackError) {
+        toast.error("No se pudieron cargar las relaciones");
+        console.error("loadRecords", fallbackError);
+        return;
+      }
+
+      setRecords((fallbackData || []).map(mapRecord));
       return;
     }
 
-    console.log("Records loaded:", data);
     setRecords((data || []).map(mapRecord));
+  }, []);
+
+  const getExerciseOptions = useCallback(async (): Promise<ExerciseOption[]> => {
+    const { data, error } = await supabase.from("exercise").select("id, name").order("name");
+
+    if (!error && data) {
+      return data.map((item) => ({ id: item.id, name: item.name ?? "" }));
+    }
+
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from("exercise")
+      .select("id, name_es")
+      .order("name_es");
+
+    if (fallbackError) {
+      throw fallbackError;
+    }
+
+    return (fallbackData || []).map((item) => ({
+      id: item.id,
+      name: (item as { name_es?: string }).name_es ?? "",
+    }));
+  }, []);
+
+  const getMuscleOptions = useCallback(async (): Promise<MuscleOption[]> => {
+    const { data, error } = await supabase
+      .from("muscle")
+      .select(
+        `
+        id,
+        name,
+        group:group_id (
+          id,
+          name
+        )
+      `
+      )
+      .order("name");
+
+    if (error) {
+      throw error;
+    }
+
+    return (data || []).map((item) => {
+      const group = normalizeRelation(item.group as MuscleGroup | MuscleGroup[] | null | undefined);
+      return {
+        id: item.id,
+        name: item.name ?? "",
+        group_id: group?.id ?? 0,
+        group_name: group?.name ?? "",
+      };
+    });
   }, []);
 
   useEffect(() => {
     const loadOptions = async () => {
-      const [{ data: exerciseList, error: exerciseError }, { data: muscleList, error: muscleError }] =
-        await Promise.all([
-          supabase.from("exercise").select("id, name_es").order("name_es"),
-          supabase
-            .from("muscle")
-            .select(
-              `
-            id,
-            name,
-            group:group_id (
-              id,
-              name
-            )
-          `
-            )
-            .order("name"),
+      try {
+        const [exerciseOptions, muscleOptions] = await Promise.all([
+          getExerciseOptions(),
+          getMuscleOptions(),
         ]);
-
-      if (exerciseError) {
-        console.error("Exercise Error:", exerciseError);
-        toast.error("No se pudieron cargar ejercicios");
-        return;
+        setExercises(exerciseOptions);
+        setMuscles(muscleOptions);
+      } catch (err) {
+        console.error("loadOptions", err);
+        toast.error("No se pudieron cargar los catálogos");
       }
-
-      if (muscleError) {
-        console.error("Muscle Error:", muscleError);
-        toast.error("No se pudieron cargar mÃºsculos");
-        return;
-      }
-
-      console.log("Exercises:", exerciseList);
-      console.log("Muscles:", muscleList);
-
-      setExercises((exerciseList || []).map(({ id, name_es }) => ({ id, name: name_es })));
-      setMuscles(
-        (muscleList || []).map((item) => {
-          const group = normalizeRelation(item.group as MuscleGroup | MuscleGroup[] | null | undefined);
-          return {
-            id: item.id,
-            name: item.name,
-            group_id: group?.id ?? 0,
-            group_name: group?.name ?? "",
-          };
-        })
-      );
     };
 
     loadOptions();
     loadRecords();
-  }, [loadRecords]);
+  }, [getExerciseOptions, getMuscleOptions, loadRecords]);
 
   useEffect(() => {
     if (editing) {
@@ -276,7 +322,7 @@ export default function ExerciseMusclePage() {
 
   const submit = async (values: FormValues) => {
     if (await checkDuplicate(values)) {
-      toast.error("La combinaciÃ³n ya existe");
+      toast.error("La combinación ya existe");
       return;
     }
 
@@ -289,29 +335,16 @@ export default function ExerciseMusclePage() {
           role: values.role,
         })
         .eq("id", editing.id)
-        .select(`
-    id,
-    role,
-    exercise:exercise_id ( id, name_es ),
-    muscle:muscle_id (
-        id,
-        name,
-        group:group_id (
-            id,
-            name
-        )
-    )
-  `)
+        .select(RECORD_SELECT)
         .single();
 
       if (error || !data) {
         toast.error("Error al actualizar");
-        console.error("Update error:", error);
         return;
       }
 
-      toast.success("RelaciÃ³n actualizada");
       setRecords((prev) => prev.map((item) => (item.id === editing.id ? mapRecord(data) : item)));
+      toast.success("Relación actualizada");
     } else {
       const { data, error } = await supabase
         .from("exercise_muscle")
@@ -320,29 +353,16 @@ export default function ExerciseMusclePage() {
           muscle_id: values.muscle_id,
           role: values.role,
         })
-        .select(`
-    id,
-    role,
-    exercise:exercise_id ( id, name_es ),
-    muscle:muscle_id (
-        id,
-        name,
-        group:group_id (
-            id,
-            name
-        )
-    )
-  `)
+        .select(RECORD_SELECT)
         .single();
 
       if (error || !data) {
         toast.error("Error al crear");
-        console.error("Insert error:", error);
         return;
       }
 
-      toast.success("RelaciÃ³n creada");
       setRecords((prev) => [mapRecord(data), ...prev]);
+      toast.success("Relación creada");
     }
 
     setOpen(false);
@@ -359,7 +379,7 @@ export default function ExerciseMusclePage() {
       return;
     }
 
-    toast.success("RelaciÃ³n eliminada");
+    toast.success("Relación eliminada");
     setRecords((prev) => prev.filter((item) => item.id !== toDelete.id));
     setToDelete(null);
   };
@@ -390,7 +410,7 @@ export default function ExerciseMusclePage() {
             <DialogContent className="max-w-xl md:max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
-                  {editing ? "Editar relaciÃ³n" : "Nueva relaciÃ³n"}
+                  {editing ? "Editar relación" : "Nueva relación"}
                 </DialogTitle>
                 <DialogDescription>
                   Selecciona el ejercicio, el musculo y el rol.
@@ -414,7 +434,7 @@ export default function ExerciseMusclePage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="muscle_id">MÃºsculo</Label>
+                    <Label htmlFor="muscle_id">Músculo</Label>
                     <select
                       id="muscle_id"
                       {...form.register("muscle_id", { valueAsNumber: true })}
@@ -458,7 +478,7 @@ export default function ExerciseMusclePage() {
         {/* Search */}
         <Card>
           <CardHeader>
-            <CardTitle>BÃºsqueda</CardTitle>
+            <CardTitle>Búsqueda</CardTitle>
           </CardHeader>
           <CardContent>
             <Input
@@ -479,7 +499,7 @@ export default function ExerciseMusclePage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Ejercicio</TableHead>
-                  <TableHead>MÃºsculo</TableHead>
+                  <TableHead>Músculo</TableHead>
                   <TableHead>Grupo muscular</TableHead>
                   <TableHead>Rol</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
@@ -540,7 +560,7 @@ export default function ExerciseMusclePage() {
                   Anterior
                 </Button>
                 <span>
-                  PÃ¡gina {page} de {totalPages}
+                  Página {page} de {totalPages}
                 </span>
                 <Button
                   variant="outline"
@@ -561,7 +581,7 @@ export default function ExerciseMusclePage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Eliminar</AlertDialogTitle>
               <AlertDialogDescription>
-                Â¿EstÃ¡s seguro de que deseas eliminar esta relaciÃ³n?
+                ¿Estás seguro de que deseas eliminar esta relación?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
