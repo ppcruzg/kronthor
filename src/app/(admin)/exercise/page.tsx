@@ -345,7 +345,7 @@ export default function ExercisesCatalog() {
                           <TableCell className="hidden lg:table-cell">
                             <div className="flex flex-wrap gap-1">
                               {primaryMuscles.length > 0 ? (
-                                primaryMuscles.slice(0, 3).map((m) => (
+                                primaryMuscles.map((m) => (
                                   <Badge key={m} variant="secondary" className="text-xs">
                                     {m}
                                   </Badge>
@@ -358,7 +358,7 @@ export default function ExercisesCatalog() {
                           <TableCell className="hidden lg:table-cell">
                             <div className="flex flex-wrap gap-1">
                               {secondaryMuscles.length > 0 ? (
-                                secondaryMuscles.slice(0, 3).map((m) => (
+                                secondaryMuscles.map((m) => (
                                   <Badge key={m} variant="outline" className="text-xs">
                                     {m}
                                   </Badge>

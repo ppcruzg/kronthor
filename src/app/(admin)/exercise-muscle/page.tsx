@@ -99,6 +99,12 @@ export default function ExerciseMusclePage() {
   const [open, setOpen] = useState(false);
   const [toDelete, setToDelete] = useState<ExerciseMuscleRecord | null>(null);
   const [page, setPage] = useState(1);
+  const [selectedExerciseId, setSelectedExerciseId] = useState("");
+  const [selectedPrimaryMuscles, setSelectedPrimaryMuscles] = useState<number[]>([]);
+  const [selectedSecondaryMuscles, setSelectedSecondaryMuscles] = useState<number[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [primaryMuscleQuery, setPrimaryMuscleQuery] = useState("");
+  const [secondaryMuscleQuery, setSecondaryMuscleQuery] = useState("");
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -125,6 +131,22 @@ export default function ExerciseMusclePage() {
     const start = (page - 1) * PAGE_SIZE;
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, page]);
+
+  const filteredPrimaryMuscles = useMemo(() => {
+    const q = primaryMuscleQuery.trim().toLowerCase();
+    return muscles.filter(
+      (muscle) =>
+        !q || muscle.name.toLowerCase().includes(q) || muscle.group_name.toLowerCase().includes(q)
+    );
+  }, [muscles, primaryMuscleQuery]);
+
+  const filteredSecondaryMuscles = useMemo(() => {
+    const q = secondaryMuscleQuery.trim().toLowerCase();
+    return muscles.filter(
+      (muscle) =>
+        !q || muscle.name.toLowerCase().includes(q) || muscle.group_name.toLowerCase().includes(q)
+    );
+  }, [muscles, secondaryMuscleQuery]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const rangeStart = filtered.length ? (page - 1) * PAGE_SIZE + 1 : 0;
@@ -364,6 +386,78 @@ export default function ExerciseMusclePage() {
     setToDelete(null);
   };
 
+  const handlePrimaryToggle = (muscleId: number, checked: boolean | "indeterminate") => {
+    const isChecked = checked === true;
+    setSelectedPrimaryMuscles(prev =>
+      isChecked ? [...prev, muscleId] : prev.filter(id => id !== muscleId)
+    );
+    // Remove from secondary if it's there
+    setSelectedSecondaryMuscles(prev => prev.filter(id => id !== muscleId));
+  };
+
+  const handleSecondaryToggle = (muscleId: number, checked: boolean | "indeterminate") => {
+    const isChecked = checked === true;
+    setSelectedSecondaryMuscles(prev =>
+      isChecked ? [...prev, muscleId] : prev.filter(id => id !== muscleId)
+    );
+    // Remove from primary if it's there
+    setSelectedPrimaryMuscles(prev => prev.filter(id => id !== muscleId));
+  };
+
+  const submitMulti = async () => {
+    if (!selectedExerciseId || (selectedPrimaryMuscles.length === 0 && selectedSecondaryMuscles.length === 0)) {
+      toast.error("Selecciona ejercicio y al menos un músculo");
+      return;
+    }
+
+    const relations = [
+      ...selectedPrimaryMuscles.map(muscleId => ({
+        exercise_id: selectedExerciseId,
+        muscle_id: muscleId,
+        role: "primary" as const
+      })),
+      ...selectedSecondaryMuscles.map(muscleId => ({
+        exercise_id: selectedExerciseId,
+        muscle_id: muscleId,
+        role: "secondary" as const
+      }))
+    ];
+
+    try {
+      const { data, error } = await supabase
+        .from("exercise_muscle")
+        .insert(relations)
+        .select(`
+    id,
+    role,
+    exercise:exercise_id ( id, name_es ),
+    muscle:muscle_id (
+        id,
+        name,
+        group:group_id (
+            id,
+            name
+        )
+    )
+  `);
+
+      if (error) {
+        toast.error("Error al crear relaciones");
+        console.error("Insert error:", error);
+        return;
+      }
+
+      toast.success(`${relations.length} relaciones creadas`);
+      setRecords(prev => [...(data || []).map(mapRecord), ...prev]);
+      setOpen(false);
+      setSelectedExerciseId("");
+      setSelectedPrimaryMuscles([]);
+      setSelectedSecondaryMuscles([]);
+    } catch (err) {
+      toast.error("Error inesperado");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 p-6">
       <div className="mx-auto max-w-6xl space-y-6">
@@ -387,70 +481,166 @@ export default function ExerciseMusclePage() {
                 Nuevo
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-xl md:max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-xl md:max-w-4xl w-full max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editing ? "Editar relación" : "Nueva relación"}
                 </DialogTitle>
                 <DialogDescription>
-                  Selecciona el ejercicio, el musculo y el rol.
+                  {editing ? "Modifica la relación." : "Selecciona ejercicio y músculos con sus roles."}
                 </DialogDescription>
               </DialogHeader>
-              <form className="space-y-6" onSubmit={form.handleSubmit(submit)}>
-                <div className="grid gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="exercise_id">Ejercicio</Label>
-                    <select
-                      id="exercise_id"
-                      {...form.register("exercise_id")}
-                      className="border px-3 py-2 rounded text-sm"
-                    >
-                      {exercises.map((exercise) => (
-                        <option key={exercise.id} value={exercise.id}>
-                          {exercise.name}
-                        </option>
-                      ))}
-                    </select>
+
+              {editing ? (
+                <form className="space-y-6" onSubmit={form.handleSubmit(submit)}>
+                  <div className="grid gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="exercise_id">Ejercicio</Label>
+                      <select
+                        id="exercise_id"
+                        {...form.register("exercise_id")}
+                        className="border px-3 py-2 rounded text-sm"
+                      >
+                        {exercises.map((exercise) => (
+                          <option key={exercise.id} value={exercise.id}>
+                            {exercise.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="muscle_id">Músculo</Label>
+                      <select
+                        id="muscle_id"
+                        {...form.register("muscle_id", { valueAsNumber: true })}
+                        className="border px-3 py-2 rounded text-sm"
+                      >
+                        {muscles.map((muscle) => (
+                          <option key={muscle.id} value={muscle.id}>
+                            {muscle.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="role">Rol</Label>
+                      <select
+                        id="role"
+                        {...form.register("role")}
+                        className="border px-3 py-2 rounded text-sm"
+                      >
+                        {ROLE_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
-                  <div className="grid gap-2">
-                    <Label htmlFor="muscle_id">Músculo</Label>
-                    <select
-                      id="muscle_id"
-                      {...form.register("muscle_id", { valueAsNumber: true })}
-                      className="border px-3 py-2 rounded text-sm"
-                    >
-                      {muscles.map((muscle) => (
-                        <option key={muscle.id} value={muscle.id}>
-                          {muscle.name}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" type="button" onClick={() => setOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button type="submit">Guardar</Button>
+                  </div>
+                </form>
+              ) : (
+                <div className="space-y-6">
+                  <div className="grid gap-4">
+                    <div className="grid gap-2">
+                      <Label>Ejercicio</Label>
+                      <select
+                        value={selectedExerciseId}
+                        onChange={(e) => setSelectedExerciseId(e.target.value)}
+                        className="border px-3 py-2 rounded text-sm"
+                      >
+                        <option value="">Seleccionar ejercicio</option>
+                        {exercises.map((exercise) => (
+                          <option key={exercise.id} value={exercise.id}>
+                            {exercise.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label>Músculos Primarios</Label>
+                        <Input
+                          placeholder="Buscar músculo primario..."
+                          value={primaryMuscleQuery}
+                          onChange={(e) => setPrimaryMuscleQuery(e.target.value)}
+                          className="mb-2"
+                        />
+                        <div className="max-h-64 overflow-y-auto border rounded p-2">
+                          {filteredPrimaryMuscles.map((muscle) => (
+                            <div key={muscle.id} className="flex items-center space-x-2 py-1">
+                              <input
+                                type="checkbox"
+                                id={`primary-${muscle.id}`}
+                                checked={selectedPrimaryMuscles.includes(muscle.id)}
+                                onChange={(e) =>
+                                  handlePrimaryToggle(muscle.id, e.target.checked)
+                                }
+                                className="w-4 h-4"
+                              />
+                              <label
+                                htmlFor={`primary-${muscle.id}`}
+                                className="text-sm cursor-pointer"
+                              >
+                                {muscle.name}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Músculos Secundarios</Label>
+                        <Input
+                          placeholder="Buscar músculo secundario..."
+                          value={secondaryMuscleQuery}
+                          onChange={(e) => setSecondaryMuscleQuery(e.target.value)}
+                          className="mb-2"
+                        />
+                        <div className="max-h-64 overflow-y-auto border rounded p-2">
+                          {filteredSecondaryMuscles.map((muscle) => (
+                            <div key={muscle.id} className="flex items-center space-x-2 py-1">
+                              <input
+                                type="checkbox"
+                                id={`secondary-${muscle.id}`}
+                                checked={selectedSecondaryMuscles.includes(muscle.id)}
+                                onChange={(e) =>
+                                  handleSecondaryToggle(muscle.id, e.target.checked)
+                                }
+                                className="w-4 h-4"
+                              />
+                              <label
+                                htmlFor={`secondary-${muscle.id}`}
+                                className="text-sm cursor-pointer"
+                              >
+                                {muscle.name}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="grid gap-2">
-                    <Label htmlFor="role">Rol</Label>
-                    <select
-                      id="role"
-                      {...form.register("role")}
-                      className="border px-3 py-2 rounded text-sm"
-                    >
-                      {ROLE_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={submitMulti} disabled={saving}>
+                      {saving ? "Guardando..." : "Crear Relaciones"}
+                    </Button>
                   </div>
                 </div>
-
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" type="button" onClick={() => setOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit">Guardar</Button>
-                </div>
-              </form>
+              )}
             </DialogContent>
           </Dialog>
         </div>
