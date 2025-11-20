@@ -105,6 +105,7 @@ export default function ExerciseMusclePage() {
   const [saving, setSaving] = useState(false);
   const [primaryMuscleQuery, setPrimaryMuscleQuery] = useState("");
   const [secondaryMuscleQuery, setSecondaryMuscleQuery] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -297,21 +298,24 @@ export default function ExerciseMusclePage() {
   };
 
   const submit = async (values: FormValues) => {
-    if (await checkDuplicate(values)) {
-      toast.error("La combinación ya existe");
-      return;
-    }
+    console.log("Submitting values:", values);
+    setSubmitting(true);
+    try {
+      if (await checkDuplicate(values)) {
+        toast.error("La combinación ya existe");
+        return;
+      }
 
-    if (editing?.id) {
-      const { data, error } = await supabase
-        .from("exercise_muscle")
-        .update({
-          exercise_id: values.exercise_id,
-          muscle_id: values.muscle_id,
-          role: values.role,
-        })
-        .eq("id", editing.id)
-        .select(`
+      if (editing?.id) {
+        const { data, error } = await supabase
+          .from("exercise_muscle")
+          .update({
+            exercise_id: values.exercise_id,
+            muscle_id: values.muscle_id,
+            role: values.role,
+          })
+          .eq("id", editing.id)
+          .select(`
     id,
     role,
     exercise:exercise_id ( id, name_es ),
@@ -324,25 +328,25 @@ export default function ExerciseMusclePage() {
         )
     )
   `)
-        .single();
+          .single();
 
-      if (error || !data) {
-        toast.error("Error al actualizar");
-        console.error("Update error:", error);
-        return;
-      }
+        if (error || !data) {
+          toast.error("Error al actualizar");
+          console.error("Update error:", error);
+          return;
+        }
 
-      toast.success("Relación actualizada");
-      setRecords((prev) => prev.map((item) => (item.id === editing.id ? mapRecord(data) : item)));
-    } else {
-      const { data, error } = await supabase
-        .from("exercise_muscle")
-        .insert({
-          exercise_id: values.exercise_id,
-          muscle_id: values.muscle_id,
-          role: values.role,
-        })
-        .select(`
+        toast.success("Relación actualizada");
+        setRecords((prev) => prev.map((item) => (item.id === editing.id ? mapRecord(data) : item)));
+      } else {
+        const { data, error } = await supabase
+          .from("exercise_muscle")
+          .insert({
+            exercise_id: values.exercise_id,
+            muscle_id: values.muscle_id,
+            role: values.role,
+          })
+          .select(`
     id,
     role,
     exercise:exercise_id ( id, name_es ),
@@ -355,20 +359,28 @@ export default function ExerciseMusclePage() {
         )
     )
   `)
-        .single();
+          .single();
 
-      if (error || !data) {
-        toast.error("Error al crear");
-        console.error("Insert error:", error);
-        return;
+        if (error || !data) {
+          toast.error("Error al crear");
+          console.error("Insert error:", error);
+          return;
+        }
+
+        toast.success("Relación creada");
+        setRecords((prev) => [mapRecord(data), ...prev]);
       }
 
-      toast.success("Relación creada");
-      setRecords((prev) => [mapRecord(data), ...prev]);
+      setOpen(false);
+      setEditing(null);
+    } finally {
+      setSubmitting(false);
     }
+  };
 
-    setOpen(false);
-    setEditing(null);
+  const onFormError = (errors: any) => {
+    console.error("Form validation errors:", errors);
+    toast.error("Revisa los campos del formulario");
   };
 
   const onDelete = async () => {
@@ -492,13 +504,14 @@ export default function ExerciseMusclePage() {
               </DialogHeader>
 
               {editing ? (
-                <form className="space-y-6" onSubmit={form.handleSubmit(submit)}>
+                <form className="space-y-6" onSubmit={form.handleSubmit(submit, onFormError)}>
                   <div className="grid gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="exercise_id">Ejercicio</Label>
                       <select
                         id="exercise_id"
-                        {...form.register("exercise_id")}
+                        value={form.watch("exercise_id")}
+                        onChange={(e) => form.setValue("exercise_id", e.target.value)}
                         className="border px-3 py-2 rounded text-sm"
                       >
                         {exercises.map((exercise) => (
@@ -513,7 +526,8 @@ export default function ExerciseMusclePage() {
                       <Label htmlFor="muscle_id">Músculo</Label>
                       <select
                         id="muscle_id"
-                        {...form.register("muscle_id", { valueAsNumber: true })}
+                        value={form.watch("muscle_id")?.toString()}
+                        onChange={(e) => form.setValue("muscle_id", Number(e.target.value))}
                         className="border px-3 py-2 rounded text-sm"
                       >
                         {muscles.map((muscle) => (
@@ -528,7 +542,8 @@ export default function ExerciseMusclePage() {
                       <Label htmlFor="role">Rol</Label>
                       <select
                         id="role"
-                        {...form.register("role")}
+                        value={form.watch("role")}
+                        onChange={(e) => form.setValue("role", e.target.value as "primary" | "secondary")}
                         className="border px-3 py-2 rounded text-sm"
                       >
                         {ROLE_OPTIONS.map((option) => (
@@ -544,7 +559,9 @@ export default function ExerciseMusclePage() {
                     <Button variant="outline" type="button" onClick={() => setOpen(false)}>
                       Cancelar
                     </Button>
-                    <Button type="submit">Guardar</Button>
+                    <Button type="submit" disabled={submitting}>
+                      {submitting ? "Guardando..." : "Guardar"}
+                    </Button>
                   </div>
                 </form>
               ) : (
