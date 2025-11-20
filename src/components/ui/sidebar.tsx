@@ -124,16 +124,23 @@ export default function Sidebar() {
         collapsed ? 'w-20' : 'w-64'
       )}
     >
-      <div className="flex items-center justify-between p-4">
-        {!collapsed && <span className="text-lg font-bold">KronThor</span>}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-white"
-          onClick={() => setCollapsed(!collapsed)}
-        >
-          {collapsed ? <Menu /> : <ChevronLeft />}
-        </Button>
+      <div className="p-4">
+        <div className="flex items-center justify-between">
+          {!collapsed && <span className="text-lg font-bold">KronThor</span>}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-white"
+            onClick={() => setCollapsed(!collapsed)}
+          >
+            {collapsed ? <Menu /> : <ChevronLeft />}
+          </Button>
+        </div>
+        {!collapsed && (
+          <div className="mt-2 text-xs text-gray-400">
+            Versión: 25.11.19.B
+          </div>
+        )}
       </div>
 
       <nav className="flex-1 px-2 space-y-2">
