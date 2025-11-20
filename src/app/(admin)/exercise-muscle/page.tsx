@@ -589,9 +589,13 @@ export default function ExerciseMusclePage() {
                               />
                               <label
                                 htmlFor={`primary-${muscle.id}`}
-                                className="text-sm cursor-pointer"
+                                className="text-sm cursor-pointer flex items-center gap-2"
                               >
                                 {muscle.name}
+                                <span className="text-gray-400">/</span>
+                                <span className="text-blue-600 font-semibold">
+                                  {`${muscle.group_name.charAt(0).toUpperCase()}${muscle.group_name.slice(1).toLowerCase()}`}
+                                </span>
                               </label>
                             </div>
                           ))}
@@ -620,9 +624,13 @@ export default function ExerciseMusclePage() {
                               />
                               <label
                                 htmlFor={`secondary-${muscle.id}`}
-                                className="text-sm cursor-pointer"
+                                className="text-sm cursor-pointer flex items-center gap-2"
                               >
                                 {muscle.name}
+                                <span className="text-gray-400">/</span>
+                                <span className="text-blue-600 font-semibold">
+                                  {`${muscle.group_name.charAt(0).toUpperCase()}${muscle.group_name.slice(1).toLowerCase()}`}
+                                </span>
                               </label>
                             </div>
                           ))}
