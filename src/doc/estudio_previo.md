@@ -1,6 +1,7 @@
 KRONTHOR – Estructura universal de entrenamiento en 12 semanas
 Taxonomía del ejercicio, perfil de demanda por deporte y reglas de transferencia para generación de planes
 
+
 Versión: 1.0    |    Uso: PRD (sección de metodología / motor de planificación)
 
 1. Propósito y alcance
