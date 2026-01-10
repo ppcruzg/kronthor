@@ -8,772 +8,566 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+    Search,
+    Plus,
+    Dumbbell,
+    Edit,
+    Trash,
+    Video,
+    ExternalLink,
+    Zap,
+    Layers,
+    Activity,
+    ChevronRight,
+    Copy,
+    Info,
+    CheckCircle2,
+    XCircle,
+    Hash
+} from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Search, Plus, Dumbbell, CheckCircle, XCircle, Edit, Trash } from "lucide-react";
-import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
-import Link from "next/link";
+import { Label } from "@/components/ui/label";
+import { ExerciseMixVisual } from "@/components/ExerciseMixVisual";
+import { cn } from "@/lib/utils";
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
 interface Exercise {
-  id: number;
-  name_es: string;
-  name_en: string | null;
-  description: string | null;
-  urlvideo: string | null;
-  laterality_id: number | null;
-  difficulty_id: number | null;
-  plane_id: number | null;
-  type_id: number | null;
-  training_method_id: number | null;
-
-  // Joins de uno a uno
-  laterality: { name: string } | null;
-  difficulty: { name: string } | null;
-  plane: { name: string } | null;
-  exercise_type: { name: string } | null;
-  training_method: { name: string } | null;
-
-  // Relaciones muchos a muchos
-  exercise_muscle: {
-    role: "primary" | "secondary" | "tertiary";
-    muscle: {
-      name: string;
-    };
-  }[];
-  exercise_equipment: {
-    equipment: {
-      id: number;
-      name: string;
-    };
-  }[];
-  exercise_movement_pattern: {
-    movement_pattern: {
-      name: string;
-    };
-  }[];
+    id: string;
+    name_es: string;
+    name_en: string | null;
+    description: string | null;
+    urlvideo: string | null;
+    is_active: boolean;
+    type_id: number | null;
+    difficulty_id: number | null;
+    training_method_id: number | null;
+    laterality_support_id: number | null;
+    laterality_load_id: number | null;
+    ssc_demand_id: number | null;
+    impact_demand_id: number | null;
+    antirotation_stability_id: number | null;
+    movement_pattern_id: number | null;
+    exercise_type: { name: string } | null;
+    difficulty: { name: string } | null;
+    training_method: { name: string } | null;
+    laterality_support: { name: string } | null;
+    laterality_load: { name: string } | null;
+    ssc_demand: { name: string } | null;
+    impact_demand: { name: string } | null;
+    antirotation_stability: { name: string } | null;
+    movement_pattern: { name: string } | null;
+    exercise_vector_mix: { id: number; weight: number; dominant_vector: { name: string } }[];
+    exercise_plane_mix: { id: number; weight: number; plane: { name: string } }[];
+    exercise_muscle: { role: "primary" | "secondary"; muscle: { name: string } }[];
+    exercise_equipment: { equipment: { id: number; name: string } }[];
 }
 
-const PAGE_SIZE = 15;
+export default function ExercisesCatalogModern() {
+    const [exercises, setExercises] = useState<Exercise[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState("");
+    const [selectedId, setSelectedId] = useState<string | null>(null);
 
-export default function ExercisesCatalog() {
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-
-  useEffect(() => {
     const fetchExercises = async () => {
-      setLoading(true);
+        setLoading(true);
+        const { data, error } = await supabase
+            .from("exercise")
+            .select(`
+        *,
+        exercise_type:type_id (name),
+        difficulty:difficulty_id (name),
+        training_method:training_method_id (name),
+        laterality_support:laterality_support_id (name),
+        laterality_load:laterality_load_id (name),
+        ssc_demand:ssc_demand_id (name),
+        impact_demand:impact_demand_id (name),
+        antirotation_stability:antirotation_stability_id (name),
+        movement_pattern:movement_pattern_id (name),
+        exercise_vector_mix (id, weight, dominant_vector:vector_id (name)),
+        exercise_plane_mix (id, weight, plane:plane_id (name)),
+        exercise_muscle!exercise_muscle_exercise_id_fkey (role, muscle:muscle_id (name)),
+        exercise_equipment (equipment:equipment_id (id, name))
+      `)
+            .order("name_es", { ascending: true });
 
-      const { data, error } = await supabase
-        .from("exercise")
-        .select(`
-          id,
-          name_es,
-          name_en,
-          description,
-          urlvideo,
-          laterality_id,
-          difficulty_id,
-          plane_id,
-          type_id,
-          training_method_id,
-          laterality:laterality_id (name),
-          difficulty:difficulty_level (name),
-          plane:plane_id (name),
-          exercise_type:type_id (name),
-          training_method:training_method_id (name),
-          exercise_muscle!exercise_muscle_exercise_id_fkey (
-            role,
-            muscle!inner (name)
-          ),
-          exercise_equipment (
-            equipment!inner (id, name)
-          ),
-          exercise_movement_pattern!exercise_movement_pattern_exercise_id_fkey (
-            movement_pattern!inner (name)
-          )
-        `)
-        .order("name_es", { ascending: true });
-
-      if (error) {
-        console.error("Error fetching exercises:", error);
-        setLoading(false);
-        return;
-      }
-
-      const formatted: Exercise[] = data.map((ex: any) => ({
-        id: ex.id,
-        name_es: ex.name_es,
-        name_en: ex.name_en ?? ex.name_es,
-        description: ex.description,
-        urlvideo: ex.urlvideo ?? null,
-        laterality_id: ex.laterality_id,
-        difficulty_id: ex.difficulty_id,
-        plane_id: ex.plane_id,
-        type_id: ex.type_id,
-        training_method_id: ex.training_method_id,
-        laterality: ex.laterality,
-        difficulty: ex.difficulty,
-        plane: ex.plane,
-        exercise_type: ex.exercise_type,
-        training_method: ex.training_method,
-        exercise_muscle: ex.exercise_muscle || [],
-        exercise_equipment: ex.exercise_equipment || [],
-        exercise_movement_pattern: ex.exercise_movement_pattern || [],
-      }));
-
-      setExercises(formatted);
-      setLoading(false);
-    };
-
-    fetchExercises();
-  }, []);
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return exercises.filter((ex) => {
-      const matchesSearch =
-        ex.name_es.toLowerCase().includes(q) ||
-        (ex.name_en && ex.name_en.toLowerCase().includes(q)) ||
-        ex.exercise_muscle.some((em) =>
-          em.muscle.name.toLowerCase().includes(q)
-        );
-      return matchesSearch;
-    });
-  }, [exercises, search]);
-
-  const paginated = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, page]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-
-  const handleDelete = async (id: number) => {
-    const { error } = await supabase.from('exercise').delete().eq('id', id);
-    if (error) {
-      console.error("Error deleting exercise:", error);
-    } else {
-      setExercises(prev => prev.filter(ex => ex.id !== id));
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-3">
-              <Dumbbell className="h-8 w-8" />
-              Catálogo de Ejercicios
-            </h1>
-            <p className="text-muted-foreground">
-              Explora y gestiona todos los ejercicios de la base de datos
-            </p>
-          </div>
-
-          <CreateExerciseDialog />
-        </div>
-
-        {/* Search */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              Búsqueda y filtros
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Input
-              placeholder="Buscar por nombre o músculo principal..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="max-w-md"
-            />
-          </CardContent>
-        </Card>
-
-        {/* Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {filtered.length} ejercicio{filtered.length !== 1 && "s"} encontrados
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {[...Array(10)].map((_, i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
-                ))}
-              </div>
-            ) : (
-              <>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="font-bold">Seleccionar</TableHead>
-                      <TableHead className="font-bold">Nombre</TableHead>
-                      <TableHead className="font-bold">Vídeo</TableHead>
-                      <TableHead className="hidden sm:table-cell font-bold">Plano</TableHead>
-                      <TableHead className="hidden sm:table-cell font-bold">Lateralidad</TableHead>
-                      <TableHead className="hidden sm:table-cell font-bold">Tipo</TableHead>
-                      <TableHead className="hidden sm:table-cell font-bold">Dificultad</TableHead>
-                      <TableHead className="hidden md:table-cell font-bold">Método de Entrenamiento</TableHead>
-                      <TableHead className="hidden lg:table-cell font-bold">Equipamiento</TableHead>
-                      <TableHead className="hidden lg:table-cell font-bold">Músculos Primarios</TableHead>
-                      <TableHead className="hidden lg:table-cell font-bold">Músculos Secundarios</TableHead>
-                      <TableHead className="hidden lg:table-cell font-bold">Patrón de Movimiento</TableHead>
-                      <TableHead className="text-right font-bold">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginated.map((ex) => {
-                      const primaryMuscles = ex.exercise_muscle
-                        .filter((em) => em.role === "primary")
-                        .map((em) => em.muscle.name);
-
-                      const secondaryMuscles = ex.exercise_muscle
-                        .filter((em) => em.role === "secondary")
-                        .map((em) => em.muscle.name);
-
-                      const allMuscles = primaryMuscles.concat(secondaryMuscles);
-
-                      return (
-                        <TableRow key={ex.id}>
-                          <TableCell>
-                            <input type="checkbox" className="w-5 h-5" />
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            <div>
-                              <div className="text-base">{ex.name_es}</div>
-                              {ex.name_en && ex.name_en !== ex.name_es && (
-                                <div className="text-xs text-muted-foreground">{ex.name_en}</div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {ex.urlvideo ? (
-                              <a href={ex.urlvideo} target="_blank" rel="noopener noreferrer">
-                                <CheckCircle className="h-5 w-5 text-green-600" />
-                              </a>
-                            ) : <XCircle className="h-5 w-5 text-red-600" />}
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell bg-muted/10">
-                            {ex.plane?.name || "—"}
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell bg-muted/10">
-                            {ex.laterality?.name || "—"}
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell bg-muted/10">
-                            {ex.exercise_type?.name || "—"}
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell bg-muted/10">
-                            <Badge
-                              variant={
-                                ex.difficulty?.name === "Avanzado"
-                                  ? "destructive"
-                                  : ex.difficulty?.name === "Intermedio"
-                                  ? "default"
-                                  : "secondary"
-                              }
-                            >
-                              {ex.difficulty?.name || "—"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell bg-muted/10">
-                            {ex.training_method?.name || "—"}
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell">
-                            {ex.exercise_equipment.length > 0 ? (
-                              <div className="flex flex-wrap gap-1">
-                                {ex.exercise_equipment.slice(0, 2).map((eq) => (
-                                  <Badge key={eq.equipment.name} variant="outline" className="text-xs">
-                                    {eq.equipment.name}
-                                  </Badge>
-                                ))}
-                                {ex.exercise_equipment.length > 2 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    +{ex.exercise_equipment.length - 2}
-                                  </Badge>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground text-xs">Peso corporal</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell">
-                            <div className="flex flex-wrap gap-1">
-                              {primaryMuscles.length > 0 ? (
-                                primaryMuscles.map((m) => (
-                                  <Badge key={m} variant="secondary" className="text-xs">
-                                    {m}
-                                  </Badge>
-                                ))
-                              ) : (
-                                <span className="text-muted-foreground text-xs">—</span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell">
-                            <div className="flex flex-wrap gap-1">
-                              {secondaryMuscles.length > 0 ? (
-                                secondaryMuscles.map((m) => (
-                                  <Badge key={m} variant="outline" className="text-xs">
-                                    {m}
-                                  </Badge>
-                                ))
-                              ) : (
-                                <span className="text-muted-foreground text-xs">—</span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell">
-                            <div className="flex flex-wrap gap-1">
-                              {ex.exercise_movement_pattern.length > 0 ? (
-                                ex.exercise_movement_pattern.map((mp) => (
-                                  <Badge key={mp.movement_pattern.name} variant="default" className="text-xs">
-                                    {mp.movement_pattern.name}
-                                  </Badge>
-                                ))
-                              ) : (
-                                <span className="text-muted-foreground text-xs">—</span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <CreateExerciseDialog editData={ex} />
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button size="sm" variant="destructive">
-                                  <Trash className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Esta acción no se puede deshacer. Esto eliminará permanentemente el ejercicio "{ex.name_es}".
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDelete(ex.id)}>
-                                    Eliminar
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-
-                {/* Paginación */}
-                <div className="flex items-center justify-between mt-6 text-sm text-muted-foreground">
-                  <p>
-                    Mostrando {(page - 1) * PAGE_SIZE + 1}-
-                    {Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={page <= 1}
-                      onClick={() => setPage((p) => p - 1)}
-                    >
-                      Anterior
-                    </Button>
-                    <span className="px-3 py-1">
-                      Página {page} de {totalPages}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={page >= totalPages}
-                      onClick={() => setPage((p) => p + 1)}
-                    >
-                      Siguiente
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-interface CreateExerciseDialogProps {
-  editData?: Exercise;
-}
-
-function CreateExerciseDialog({ editData }: CreateExerciseDialogProps) {
-  const isEdit = !!editData;
-  const [open, setOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    name_es: "",
-    name_en: "",
-    urlvideo: "",
-    plane_id: "",
-    laterality_id: "",
-    type_id: "",
-    difficulty_id: "",
-    training_method_id: "",
-    equipment_id: "",
-  });
-  const [planes, setPlanes] = useState<any[]>([]);
-  const [lateralities, setLateralities] = useState<any[]>([]);
-  const [types, setTypes] = useState<any[]>([]);
-  const [difficulties, setDifficulties] = useState<any[]>([]);
-  const [training_methods, setTrainingMethods] = useState<any[]>([]);
-  const [equipments, setEquipments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const fetchOptions = async () => {
-      try {
-        const planesRes = await supabase.from("plane").select("id, name");
-        const lateralitiesRes = await supabase.from("laterality").select("id, name");
-        const typesRes = await supabase.from("exercise_type").select("id, name");
-        const difficultiesRes = await supabase.from("difficulty_level").select("id, name");
-        const trainingMethodsRes = await supabase.from("training_method").select("id, name");
-        const equipmentsRes = await supabase.from("equipment").select("id, name");
-
-        if (planesRes.error) console.error("Error fetching planes:", planesRes.error);
-        if (lateralitiesRes.error) console.error("Error fetching lateralities:", lateralitiesRes.error);
-        if (typesRes.error) console.error("Error fetching types:", typesRes.error);
-        if (difficultiesRes.error) console.error("Error fetching difficulties:", difficultiesRes.error);
-        if (trainingMethodsRes.error) console.error("Error fetching training methods:", trainingMethodsRes.error);
-        if (equipmentsRes.error) console.error("Error fetching equipments:", equipmentsRes.error);
-
-        setPlanes(planesRes.data || []);
-        setLateralities(lateralitiesRes.data || []);
-        setTypes(typesRes.data || []);
-        setDifficulties(difficultiesRes.data || []);
-        setTrainingMethods(trainingMethodsRes.data || []);
-        setEquipments(equipmentsRes.data || []);
-      } catch (error) {
-        console.error('Fetch options error:', error);
-        setPlanes([]);
-        setLateralities([]);
-        setTypes([]);
-        setDifficulties([]);
-        setTrainingMethods([]);
-        setEquipments([]);
-      }
-    };
-    fetchOptions();
-  }, []);
-
-  // Initialize form data when editData changes
-  useEffect(() => {
-    if (editData) {
-      const equipmentId = editData.exercise_equipment?.[0]?.equipment?.id?.toString() || "";
-      setFormData({
-        name_es: editData.name_es || "",
-        name_en: editData.name_en || "",
-        urlvideo: editData.urlvideo || "",
-        plane_id: editData.plane_id?.toString() || "",
-        laterality_id: editData.laterality_id?.toString() || "",
-        type_id: editData.type_id?.toString() || "",
-        difficulty_id: editData.difficulty_id?.toString() || "",
-        training_method_id: editData.training_method_id?.toString() || "",
-        equipment_id: equipmentId,
-      });
-    } else {
-      setFormData({
-        name_es: "",
-        name_en: "",
-        urlvideo: "",
-        plane_id: "",
-        laterality_id: "",
-        type_id: "",
-        difficulty_id: "",
-        training_method_id: "",
-        equipment_id: "",
-      });
-    }
-  }, [editData]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    const { name_es, name_en, urlvideo, plane_id, laterality_id, type_id, difficulty_id, training_method_id, equipment_id } = formData;
-
-    if (isEdit && editData) {
-      // Update existing exercise
-      const { error } = await supabase
-        .from("exercise")
-        .update({
-          name_es,
-          name_en: name_en || null,
-          urlvideo: urlvideo || undefined,
-          plane_id: plane_id ? parseInt(plane_id) : undefined,
-          laterality_id: laterality_id ? parseInt(laterality_id) : undefined,
-          type_id: type_id ? parseInt(type_id) : undefined,
-          difficulty_id: difficulty_id ? parseInt(difficulty_id) : undefined,
-          training_method_id: training_method_id ? parseInt(training_method_id) : undefined,
-        })
-        .eq('id', editData.id);
-
-      if (error) {
-        console.error("Error updating exercise:", error);
-        setLoading(false);
-        return;
-      }
-
-      // Handle equipment update
-      if (equipment_id) {
-        await supabase.from("exercise_equipment").delete().eq("exercise_id", editData.id);
-        await supabase.from("exercise_equipment").insert({
-          exercise_id: editData.id,
-          equipment_id: parseInt(equipment_id),
-        });
-      }
-    } else {
-      // Create new exercise
-      const { data, error } = await supabase.from("exercise").insert({
-        name_es,
-        name_en: name_en || null,
-        urlvideo: urlvideo || undefined,
-        plane_id: plane_id ? parseInt(plane_id) : undefined,
-        laterality_id: laterality_id ? parseInt(laterality_id) : undefined,
-        type_id: type_id ? parseInt(type_id) : undefined,
-        difficulty_id: difficulty_id ? parseInt(difficulty_id) : undefined,
-        training_method_id: training_method_id ? parseInt(training_method_id) : undefined,
-      });
-
-      if (error) {
-        console.error("Error creating exercise:", error);
-        setLoading(false);
-        return;
-      }
-
-      if (data && data[0] && equipment_id) {
-        const exerciseId = (data[0] as { id: number }).id;
-        await supabase.from("exercise_equipment").insert({
-          exercise_id: exerciseId,
-          equipment_id: parseInt(equipment_id),
-        });
-      }
-    }
-
-    setLoading(false);
-    setOpen(false);
-
-    // Reset form only for create mode
-    if (!isEdit) {
-      setFormData({
-        name_es: "",
-        name_en: "",
-        urlvideo: "",
-        plane_id: "",
-        laterality_id: "",
-        type_id: "",
-        difficulty_id: "",
-        training_method_id: "",
-        equipment_id: "",
-      });
-    }
-
-    window.location.reload(); // Simple refresh
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {isEdit ? (
-          <Button size="sm" variant="outline" className="mr-2">
-            <Edit className="h-4 w-4" />
-          </Button>
-        ) : (
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo ejercicio
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="max-w-screen-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {isEdit ? "Editar ejercicio" : "Crear nuevo ejercicio"}
-          </DialogTitle>
-          <DialogDescription>
-            {isEdit
-              ? "Modifica los campos para actualizar el ejercicio."
-              : "Completa los campos para crear un nuevo ejercicio."
+        if (!error) {
+            setExercises(data || []);
+            if (data && data.length > 0 && !selectedId) {
+                setSelectedId(data[0].id);
             }
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <Label htmlFor="name_es">Nombre Español</Label>
-            <Input
-              id="name_es"
-              value={formData.name_es}
-              onChange={(e) => setFormData({ ...formData, name_es: e.target.value })}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="name_en">Nombre Inglés</Label>
-            <Input
-              id="name_en"
-              value={formData.name_en}
-              onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label htmlFor="url">URL Vídeo</Label>
-            <Input
-              id="url"
-              value={formData.urlvideo}
-              onChange={(e) => setFormData({ ...formData, urlvideo: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label htmlFor="plane">Plano</Label>
-            <Select value={formData.plane_id} onValueChange={(value) => setFormData({ ...formData, plane_id: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar plano" />
-              </SelectTrigger>
-              <SelectContent>
-                {planes.map((plane) => (
-                  <SelectItem key={plane.id} value={plane.id.toString()}>
-                    {plane.name}
-                  </SelectItem>
+        }
+        setLoading(false);
+    };
+
+    useEffect(() => { fetchExercises(); }, []);
+
+    const filtered = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        return exercises.filter(ex =>
+            ex.name_es.toLowerCase().includes(q) ||
+            (ex.name_en && ex.name_en.toLowerCase().includes(q)) ||
+            ex.exercise_muscle.some(em => em.muscle.name.toLowerCase().includes(q))
+        );
+    }, [exercises, search]);
+
+    const selectedExercise = useMemo(() =>
+        exercises.find(ex => ex.id === selectedId) || null
+        , [exercises, selectedId]);
+
+    const handleDelete = async (id: string) => {
+        const { error } = await supabase.from('exercise').delete().eq('id', id);
+        if (!error) {
+            setExercises(prev => prev.filter(ex => ex.id !== id));
+            if (selectedId === id) setSelectedId(exercises[0]?.id || null);
+        }
+    };
+
+    return (
+        <div className="h-[calc(100vh-2rem)] flex flex-col gap-4 overflow-hidden">
+            {/* Header */}
+            <div className="flex justify-between items-center px-4 shrink-0">
+                <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-500/20">
+                        <Dumbbell className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-black tracking-tighter text-slate-900 dark:text-white uppercase">Ejercicios</h1>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Catálogo Core de Alto Rendimiento</p>
+                    </div>
+                </div>
+                <div className="flex gap-3">
+                    <CreateExerciseDialog onSuccess={fetchExercises} />
+                </div>
+            </div>
+
+            {/* Main Content Area */}
+            <div className="flex-1 flex gap-4 min-h-0 px-4 pb-4">
+                {/* Left Pane: List */}
+                <div className="w-80 shrink-0 flex flex-col gap-4 min-h-0 bg-white dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
+                    <div className="p-4 border-b border-slate-100 dark:border-white/5 space-y-3 bg-slate-50/50 dark:bg-transparent">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 font-bold" />
+                            <Input
+                                placeholder="Buscar por nombre o músculo..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="pl-10 h-11 bg-white dark:bg-slate-950 border-slate-200 dark:border-white/10 rounded-2xl text-slate-900 dark:text-slate-100 font-bold placeholder:text-slate-400"
+                            />
+                        </div>
+                        <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-500 tracking-widest px-1">
+                            <span>{filtered.length} RESULTADOS</span>
+                            <span>ORDEN: A-Z</span>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scroll-thumb-white/10">
+                        {loading ? (
+                            <div className="space-y-2">
+                                {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-2xl bg-slate-100 dark:bg-white/5" />)}
+                            </div>
+                        ) : (
+                            <div className="space-y-1">
+                                {filtered.map(ex => (
+                                    <button
+                                        key={ex.id}
+                                        onClick={() => setSelectedId(ex.id)}
+                                        className={cn(
+                                            "w-full text-left p-4 rounded-2xl transition-all duration-200 flex items-center justify-between group",
+                                            selectedId === ex.id
+                                                ? "bg-indigo-600 shadow-lg shadow-indigo-600/20 text-white"
+                                                : "hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400"
+                                        )}
+                                    >
+                                        <div className="flex-1 min-w-0">
+                                            <div className={cn("text-sm font-black truncate uppercase tracking-tight", selectedId === ex.id ? "text-white" : "text-slate-900 dark:text-slate-200")}>
+                                                {ex.name_es}
+                                            </div>
+                                            <div className={cn("text-[10px] font-bold truncate opacity-70 italic", selectedId === ex.id ? "text-indigo-100" : "text-slate-500")}>
+                                                {ex.name_en || ex.name_es}
+                                            </div>
+                                        </div>
+                                        <ChevronRight className={cn("h-4 w-4 transition-transform", selectedId === ex.id ? "scale-110 opacity-100" : "opacity-0 group-hover:opacity-100 translate-x-[-4px] group-hover:translate-x-0")} />
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right Pane: Details & Analysis */}
+                <div className="flex-1 min-h-0 bg-white dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm flex flex-col">
+                    {selectedExercise ? (
+                        <>
+                            {/* Detail Header */}
+                            <div className="p-8 border-b border-slate-100 dark:border-white/5 flex justify-between items-start bg-slate-50/30 dark:bg-transparent">
+                                <div className="space-y-3 max-w-4xl">
+                                    <div className="flex items-center gap-3">
+                                        <Badge className="bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20 px-3 py-1 font-black text-[10px] uppercase tracking-widest">
+                                            {selectedExercise.exercise_type?.name || "STANDARD"}
+                                        </Badge>
+                                        <Badge variant="outline" className={cn(
+                                            "font-black text-[10px] uppercase tracking-widest px-3 py-1 border-none",
+                                            selectedExercise.difficulty?.name === 'Avanzado' ? 'bg-rose-500/10 text-rose-600' :
+                                                selectedExercise.difficulty?.name === 'Intermedio' ? 'bg-amber-500/10 text-amber-600' :
+                                                    'bg-emerald-500/10 text-emerald-600'
+                                        )}>
+                                            {selectedExercise.difficulty?.name || "Básico"}
+                                        </Badge>
+                                        {!selectedExercise.is_active && (
+                                            <Badge className="bg-red-500/10 text-red-600 border-none font-black text-[10px] uppercase">Inactivo</Badge>
+                                        )}
+                                    </div>
+                                    <h2 className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white uppercase leading-none">
+                                        {selectedExercise.name_es}
+                                    </h2>
+                                    <p className="text-slate-600 dark:text-slate-400 font-bold text-sm leading-relaxed max-w-xl">
+                                        {selectedExercise.description || "Sin descripción científica detallada aún."}
+                                    </p>
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <CreateExerciseDialog editData={selectedExercise} onSuccess={fetchExercises} />
+                                    <CreateExerciseDialog
+                                        duplicateData={selectedExercise}
+                                        onSuccess={fetchExercises}
+                                        trigger={
+                                            <Button variant="outline" className="rounded-xl font-bold border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5" title="Duplicar como base">
+                                                <Copy className="h-4 w-4 mr-2" />
+                                                DUPLICAR
+                                            </Button>
+                                        }
+                                    />
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="outline" className="rounded-xl font-bold text-rose-600 border-rose-100 dark:border-rose-900/30 hover:bg-rose-50 dark:hover:bg-rose-900/20">
+                                                <Trash className="h-4 w-4" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent className="glass-dialog">
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle className="text-xl font-black uppercase">¿Eliminar ejercicio?</AlertDialogTitle>
+                                                <AlertDialogDescription className="text-slate-600 dark:text-slate-400 font-bold">
+                                                    Esta acción es irreversible y afectará a todos los programas que usen este ejercicio.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDelete(selectedExercise.id)} className="bg-rose-600 hover:bg-rose-700 rounded-xl font-bold">
+                                                    ELIMINAR PERMANENTE
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
+                            </div>
+
+                            {/* Detail Content */}
+                            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+
+                                    {/* Left Column: Analysis */}
+                                    <div className="lg:col-span-7 space-y-10">
+                                        {/* Visual Mixes Card */}
+                                        <div className="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-sm space-y-8">
+                                            <h3 className="text-xs font-black uppercase tracking-[0.3em] text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
+                                                <Activity className="h-4 w-4" /> Análisis de Coordenadas
+                                            </h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                                <ExerciseMixVisual
+                                                    items={selectedExercise.exercise_vector_mix.map(v => ({ id: v.id, name: v.dominant_vector.name, weight: v.weight }))}
+                                                    title="Vectores de Fuerza"
+                                                    type="vector"
+                                                />
+                                                <ExerciseMixVisual
+                                                    items={selectedExercise.exercise_plane_mix.map(p => ({ id: p.id, name: p.plane.name, weight: p.weight }))}
+                                                    title="Planos de Ejecución"
+                                                    type="plane"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Muscles & Equipment */}
+                                        <div className="grid grid-cols-2 gap-6">
+                                            <div className="space-y-4">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                                                    <Layers className="h-3 w-3" /> Foco Muscular
+                                                </Label>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {selectedExercise.exercise_muscle.map((m, i) => (
+                                                        <Badge key={i} variant={m.role === 'primary' ? 'default' : 'secondary'} className={cn(
+                                                            "text-[10px] font-black uppercase px-2 py-0.5",
+                                                            m.role === 'primary' ? "bg-indigo-600" : "bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400"
+                                                        )}>
+                                                            {m.muscle.name} {m.role === 'primary' ? '(P)' : '(S)'}
+                                                        </Badge>
+                                                    ))}
+                                                    {selectedExercise.exercise_muscle.length === 0 && <span className="text-xs text-slate-400 italic">No definido</span>}
+                                                </div>
+                                            </div>
+                                            <div className="space-y-4">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                                                    <Plus className="h-3 w-3" /> Equipamiento
+                                                </Label>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {selectedExercise.exercise_equipment.map((e, i) => (
+                                                        <Badge key={i} variant="outline" className="text-[10px] font-black uppercase border-slate-200 dark:border-white/10">
+                                                            {e.equipment.name}
+                                                        </Badge>
+                                                    ))}
+                                                    {selectedExercise.exercise_equipment.length === 0 && <span className="text-xs text-slate-400 italic">Peso corporal</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Right Column: Parameters Grid */}
+                                    <div className="lg:col-span-5 space-y-10">
+                                        {/* Params Group: Biomechanics */}
+                                        <div className="space-y-4">
+                                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100 dark:border-white/5 pb-2">Parámetros Biomecánicos</h4>
+                                            <div className="grid grid-cols-1 gap-2">
+                                                <DetailRow label="Patrón" value={selectedExercise.movement_pattern?.name} icon={<Activity className="h-3.5 w-3.5" />} />
+                                                <DetailRow label="Apoyo" value={selectedExercise.laterality_support?.name} icon={<Hash className="h-3.5 w-3.5" />} />
+                                                <DetailRow label="Carga" value={selectedExercise.laterality_load?.name} icon={<Layers className="h-3.5 w-3.5" />} />
+                                                <DetailRow label="Anti-Rotación" value={selectedExercise.antirotation_stability?.name} icon={<Activity className="h-3.5 w-3.5" />} />
+                                            </div>
+                                        </div>
+
+                                        {/* Params Group: Physiology */}
+                                        <div className="space-y-4">
+                                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100 dark:border-white/5 pb-2">Perfil Fisiológico</h4>
+                                            <div className="grid grid-cols-1 gap-2">
+                                                <DetailRow label="Demanda SSC" value={selectedExercise.ssc_demand?.name} icon={<Zap className="h-3.5 w-3.5" />} color="text-amber-500" />
+                                                <DetailRow label="Demanda Impacto" value={selectedExercise.impact_demand?.name} icon={<Activity className="h-3.5 w-3.5" />} color="text-rose-500" />
+                                                <DetailRow label="Método" value={selectedExercise.training_method?.name} icon={<Info className="h-3.5 w-3.5" />} />
+                                            </div>
+                                        </div>
+
+                                        {/* Video Resource */}
+                                        {selectedExercise.urlvideo && (
+                                            <a
+                                                href={selectedExercise.urlvideo}
+                                                target="_blank"
+                                                rel="noopener"
+                                                className="flex items-center justify-between p-4 bg-indigo-50 dark:bg-indigo-500/10 rounded-2xl border border-indigo-100 dark:border-indigo-500/20 group hover:shadow-md transition-all"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2 bg-indigo-600 rounded-lg">
+                                                        <Video className="h-4 w-4 text-white" />
+                                                    </div>
+                                                    <span className="text-sm font-black text-indigo-700 dark:text-indigo-300 uppercase">Ver Multimedia</span>
+                                                </div>
+                                                <ExternalLink className="h-4 w-4 text-indigo-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                                            </a>
+                                        )}
+                                    </div>
+
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center p-12 space-y-4">
+                            <div className="p-6 bg-slate-100 dark:bg-white/5 rounded-full">
+                                <Dumbbell className="h-12 w-12 text-slate-300 dark:text-slate-700" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Registro Maestro</h3>
+                                <p className="text-slate-500 font-bold max-w-xs">Selecciona un ejercicio de la lista para gestionar sus parámetros biomecánicos y fisiológicos.</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function DetailRow({ label, value, icon, color = "text-indigo-500" }: { label: string, value?: string, icon: React.ReactNode, color?: string }) {
+    return (
+        <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-100/50 dark:border-white/5">
+            <div className="flex items-center gap-3">
+                <div className={cn("p-1.5 opacity-80", color)}>{icon}</div>
+                <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">{label}</span>
+            </div>
+            <span className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase bg-white dark:bg-slate-900 px-2 py-0.5 rounded-lg border border-slate-200 dark:border-white/10">
+                {value || "---"}
+            </span>
+        </div>
+    );
+}
+
+{/* Re-using and improving Dialog from original for consistency */ }
+interface CreateExerciseDialogProps {
+    editData?: Exercise;
+    duplicateData?: Exercise;
+    onSuccess: () => void;
+    trigger?: React.ReactNode;
+}
+
+function CreateExerciseDialog({ editData, duplicateData, onSuccess, trigger }: CreateExerciseDialogProps) {
+    const isEdit = !!editData;
+    const isDuplicate = !!duplicateData;
+    const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    const [options, setOptions] = useState<any>({
+        planes: [], supports: [], loads: [], ssc: [], impact: [], antirot: [], methods: [], types: [], difficulties: [], patterns: [], equipments: [], vectors: []
+    });
+
+    const [formData, setFormData] = useState<any>({
+        name_es: "", name_en: "", description: "", urlvideo: "", type_id: "", difficulty_id: "", training_method_id: "", laterality_support_id: "", laterality_load_id: "", ssc_demand_id: "", impact_demand_id: "", antirotation_stability_id: "", movement_pattern_id: "",
+    });
+
+    useEffect(() => {
+        if (open) {
+            const fetchOptions = async () => {
+                const [planes, supports, loads, ssc, impact, antirot, methods, types, diffs, patterns, equips, vectors] = await Promise.all([
+                    supabase.from("plane").select("id, name"),
+                    supabase.from("laterality_support").select("id, name"),
+                    supabase.from("laterality_load").select("id, name"),
+                    supabase.from("ssc_demand").select("id, name"),
+                    supabase.from("impact_demand").select("id, name"),
+                    supabase.from("antirotation_stability").select("id, name"),
+                    supabase.from("training_method").select("id, name"),
+                    supabase.from("exercise_type").select("id, name"),
+                    supabase.from("difficulty_level").select("id, name"),
+                    supabase.from("movement_pattern").select("id, name"),
+                    supabase.from("equipment").select("id, name"),
+                    supabase.from("dominant_vector").select("id, name")
+                ]);
+                setOptions({ planes: planes.data || [], supports: supports.data || [], loads: loads.data || [], ssc: ssc.data || [], impact: impact.data || [], antirot: antirot.data || [], methods: methods.data || [], types: types.data || [], difficulties: diffs.data || [], patterns: patterns.data || [], equipments: equips.data || [], vectors: vectors.data || [] });
+            };
+            fetchOptions();
+        }
+    }, [open]);
+
+    useEffect(() => {
+        if (open) {
+            if (editData) {
+                setFormData({
+                    name_es: editData.name_es, name_en: editData.name_en || "", description: editData.description || "", urlvideo: editData.urlvideo || "", type_id: editData.type_id?.toString() || "", difficulty_id: editData.difficulty_id?.toString() || "", training_method_id: editData.training_method_id?.toString() || "", laterality_support_id: editData.laterality_support_id?.toString() || "", laterality_load_id: editData.laterality_load_id?.toString() || "", ssc_demand_id: editData.ssc_demand_id?.toString() || "", impact_demand_id: editData.impact_demand_id?.toString() || "", antirotation_stability_id: editData.antirotation_stability_id?.toString() || "", movement_pattern_id: editData.movement_pattern_id?.toString() || "",
+                });
+            } else if (duplicateData) {
+                setFormData({
+                    name_es: `${duplicateData.name_es} (COPIA)`, name_en: duplicateData.name_en ? `${duplicateData.name_en} (COPY)` : "", description: duplicateData.description || "", urlvideo: duplicateData.urlvideo || "", type_id: duplicateData.type_id?.toString() || "", difficulty_id: duplicateData.difficulty_id?.toString() || "", training_method_id: duplicateData.training_method_id?.toString() || "", laterality_support_id: duplicateData.laterality_support_id?.toString() || "", laterality_load_id: duplicateData.laterality_load_id?.toString() || "", ssc_demand_id: duplicateData.ssc_demand_id?.toString() || "", impact_demand_id: duplicateData.impact_demand_id?.toString() || "", antirotation_stability_id: duplicateData.antirotation_stability_id?.toString() || "", movement_pattern_id: duplicateData.movement_pattern_id?.toString() || "",
+                });
+            } else {
+                setFormData({
+                    name_es: "", name_en: "", description: "", urlvideo: "", type_id: "", difficulty_id: "", training_method_id: "", laterality_support_id: "", laterality_load_id: "", ssc_demand_id: "", impact_demand_id: "", antirotation_stability_id: "", movement_pattern_id: "",
+                });
+            }
+        }
+    }, [editData, duplicateData, open]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        const dataToSave = { ...formData, type_id: parseInt(formData.type_id) || null, difficulty_id: parseInt(formData.difficulty_id) || null, training_method_id: parseInt(formData.training_method_id) || null, laterality_support_id: parseInt(formData.laterality_support_id) || null, laterality_load_id: parseInt(formData.laterality_load_id) || null, ssc_demand_id: parseInt(formData.ssc_demand_id) || null, impact_demand_id: parseInt(formData.impact_demand_id) || null, antirotation_stability_id: parseInt(formData.antirotation_stability_id) || null, movement_pattern_id: parseInt(formData.movement_pattern_id) || null };
+        let error;
+        if (isEdit) { error = (await supabase.from("exercise").update(dataToSave).eq("id", editData.id)).error; }
+        else { error = (await supabase.from("exercise").insert(dataToSave).select()).error; }
+        if (!error) { onSuccess(); setOpen(false); }
+        setLoading(false);
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                {trigger ? trigger : (isEdit ? (
+                    <Button variant="outline" className="rounded-xl font-bold border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5">
+                        <Edit className="h-4 w-4 mr-2" /> EDITAR
+                    </Button>
+                ) : (
+                    <Button className="bg-indigo-600 hover:bg-indigo-700 shadow-[0_0_20px_rgba(79,70,229,0.3)] rounded-xl font-bold">
+                        <Plus className="mr-2 h-4 w-4" /> REGISTRAR EJERCICIO
+                    </Button>
                 ))}
-              </SelectContent>
+            </DialogTrigger>
+            <DialogContent className="glass-dialog max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl">
+                <DialogHeader>
+                    <DialogTitle className="text-3xl font-black italic uppercase tracking-tighter">
+                        {isEdit ? "Optimizar Parámetros" : (isDuplicate ? "Duplicar Ejercicio" : "Nuevo Atleta Mecánico")}
+                    </DialogTitle>
+                    <DialogDescription className="text-slate-500 font-bold">
+                        Define el ADN biomecánico para este ejercicio.
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-8 py-4">
+                    {/* Form fields - compressed version of original for space */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                            <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">Nombre (ES)</Label>
+                            <Input value={formData.name_es} onChange={e => setFormData({ ...formData, name_es: e.target.value })} className="rounded-xl bg-white/5 font-bold" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">Name (EN)</Label>
+                            <Input value={formData.name_en} onChange={e => setFormData({ ...formData, name_en: e.target.value })} className="rounded-xl bg-white/5 font-bold italic" />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                        <SelectField label="Patrón" value={formData.movement_pattern_id} options={options.patterns} onChange={v => setFormData({ ...formData, movement_pattern_id: v })} />
+                        <SelectField label="Tipo Apoyo" value={formData.laterality_support_id} options={options.supports} onChange={v => setFormData({ ...formData, laterality_support_id: v })} />
+                        <SelectField label="Tipo Carga" value={formData.laterality_load_id} options={options.loads} onChange={v => setFormData({ ...formData, laterality_load_id: v })} />
+                        <SelectField label="SSC" value={formData.ssc_demand_id} options={options.ssc} onChange={v => setFormData({ ...formData, ssc_demand_id: v })} />
+                        <SelectField label="Impacto" value={formData.impact_demand_id} options={options.impact} onChange={v => setFormData({ ...formData, impact_demand_id: v })} />
+                        <SelectField label="Dificultad" value={formData.difficulty_id} options={options.difficulties} onChange={v => setFormData({ ...formData, difficulty_id: v })} />
+                    </div>
+                    <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-white/5">
+                        <Input placeholder="URL Vídeo descriptivo" value={formData.urlvideo} onChange={e => setFormData({ ...formData, urlvideo: e.target.value })} className="rounded-xl bg-white/5 font-bold" />
+                        <textarea placeholder="Descripción técnica del ejercicio..." value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full h-24 rounded-2xl bg-white/5 border border-slate-200 dark:border-white/10 p-4 font-bold text-sm outline-none focus:ring-1 focus:ring-indigo-600" />
+                    </div>
+                    <Button type="submit" disabled={loading} className="w-full py-6 rounded-2xl bg-indigo-600 text-lg font-black tracking-widest uppercase">
+                        {loading ? "Sincronizando..." : (isEdit ? "Confirmar Cambios" : "Desplegar Ejercicio")}
+                    </Button>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function SelectField({ label, value, options, onChange }: { label: string, value: string, options: any[], onChange: (v: string) => void }) {
+    return (
+        <div className="space-y-1.5">
+            <Label className="text-[10px] uppercase text-slate-500 font-black ml-1">{label}</Label>
+            <Select value={value} onValueChange={onChange}>
+                <SelectTrigger className="rounded-xl bg-white/5 h-10 font-bold border-slate-200 dark:border-white/10">
+                    <SelectValue placeholder="..." />
+                </SelectTrigger>
+                <SelectContent className="glass-dialog rounded-xl">
+                    {options.map((opt) => (
+                        <SelectItem key={opt.id} value={opt.id.toString()} className="font-bold">{opt.name}</SelectItem>
+                    ))}
+                </SelectContent>
             </Select>
-          </div>
-          <div>
-            <Label htmlFor="laterality">Lateralidad</Label>
-            <Select value={formData.laterality_id} onValueChange={(value) => setFormData({ ...formData, laterality_id: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar lateralidad" />
-              </SelectTrigger>
-              <SelectContent>
-                {lateralities.map((lat) => (
-                  <SelectItem key={lat.id} value={lat.id.toString()}>
-                    {lat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="type">Tipo</Label>
-            <Select value={formData.type_id} onValueChange={(value) => setFormData({ ...formData, type_id: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                {types.map((type) => (
-                  <SelectItem key={type.id} value={type.id.toString()}>
-                    {type.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="difficulty">Dificultad</Label>
-            <Select value={formData.difficulty_id} onValueChange={(value) => setFormData({ ...formData, difficulty_id: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar dificultad" />
-              </SelectTrigger>
-              <SelectContent>
-                {difficulties.map((diff) => (
-                  <SelectItem key={diff.id} value={diff.id.toString()}>
-                    {diff.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="training_method">Método de Entrenamiento</Label>
-            <Select value={formData.training_method_id} onValueChange={(value) => setFormData({ ...formData, training_method_id: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar método" />
-              </SelectTrigger>
-              <SelectContent>
-                {training_methods.map((method) => (
-                  <SelectItem key={method.id} value={method.id.toString()}>
-                    {method.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="equipment">Equipamiento</Label>
-            <Select value={formData.equipment_id} onValueChange={(value) => setFormData({ ...formData, equipment_id: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar equipamiento" />
-              </SelectTrigger>
-              <SelectContent>
-                {equipments.map((equip) => (
-                  <SelectItem key={equip.id} value={equip.id.toString()}>
-                    {equip.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="md:col-span-2">
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Guardando..." : (isEdit ? "Actualizar ejercicio" : "Crear ejercicio")}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
+        </div>
+    );
 }
