@@ -1,210 +1,323 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 import Sidebar from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Dumbbell,
+  Trophy,
   Activity,
-  LineChart,
-  ShieldCheck,
+  Layers,
+  Package,
+  Gauge,
+  TrendingUp,
+  Database,
+  Zap,
   Target,
   Users,
-  Zap,
+  BarChart3,
 } from "lucide-react";
 
-const metrics = [
-  { label: "Ejercicios catalogados", value: "320+" },
-  { label: "Musculos y cadenas", value: "90+" },
-  { label: "Metodos validados", value: "40" },
-];
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-const featureCards = [
-  {
-    title: "Catalogo inteligente",
-    description:
-      "Define variaciones, equipamiento y patrones de movimiento en segundos.",
-    icon: Activity,
-    accent: "from-indigo-500/20 to-indigo-500/5 border-indigo-500/30",
-  },
-  {
-    title: "Planes centrados en capacidades",
-    description:
-      "Mapea capacidades primarias y secundarias para cada deporte o equipo.",
-    icon: Target,
-    accent: "from-sky-500/20 to-sky-500/5 border-sky-500/30",
-  },
-  {
-    title: "Monitoreo en tiempo real",
-    description:
-      "Tableros compartidos para atletas, entrenadores y directores de rendimiento.",
-    icon: LineChart,
-    accent: "from-emerald-500/20 to-emerald-500/5 border-emerald-500/30",
-  },
-];
+interface DashboardMetrics {
+  exercises: number;
+  sports: number;
+  muscles: number;
+  muscleGroups: number;
+  equipment: number;
+  patterns: number;
+  trainingMethods: number;
+  physicalCapabilities: number;
+}
 
-const workflow = [
-  {
-    title: "Explora datos",
-    detail:
-      "Filtra ejercicios por objetivo, carga mecanica y riesgo esperado para componer sesiones.",
-  },
-  {
-    title: "Construye sesiones",
-    detail:
-      "Arrastra movimientos a bloques, asigna capacidades y deja notas para el staff.",
-  },
-  {
-    title: "Comparte resultados",
-    detail:
-      "Usa dashboards y reportes automaticos para seguir la evolucion de cada atleta.",
-  },
-];
+export default function Dashboard() {
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [loading, setLoading] = useState(true);
 
-export default function Home() {
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      setLoading(true);
+
+      const [
+        exercisesRes,
+        sportsRes,
+        musclesRes,
+        muscleGroupsRes,
+        equipmentRes,
+        patternsRes,
+        methodsRes,
+        capabilitiesRes,
+      ] = await Promise.all([
+        supabase.from("exercise").select("id", { count: "exact", head: true }),
+        supabase.from("sport").select("id", { count: "exact", head: true }),
+        supabase.from("muscle").select("id", { count: "exact", head: true }),
+        supabase.from("muscle_group").select("id", { count: "exact", head: true }),
+        supabase.from("equipment").select("id", { count: "exact", head: true }),
+        supabase.from("movement_pattern").select("id", { count: "exact", head: true }),
+        supabase.from("training_method").select("id", { count: "exact", head: true }),
+        supabase.from("physical_capability").select("id", { count: "exact", head: true }),
+      ]);
+
+      setMetrics({
+        exercises: exercisesRes.count || 0,
+        sports: sportsRes.count || 0,
+        muscles: musclesRes.count || 0,
+        muscleGroups: muscleGroupsRes.count || 0,
+        equipment: equipmentRes.count || 0,
+        patterns: patternsRes.count || 0,
+        trainingMethods: methodsRes.count || 0,
+        physicalCapabilities: capabilitiesRes.count || 0,
+      });
+
+      setLoading(false);
+    };
+
+    fetchMetrics();
+  }, []);
+
+  const statCards = [
+    {
+      label: "Ejercicios Catalogados",
+      value: metrics?.exercises || 0,
+      icon: Dumbbell,
+      color: "from-indigo-500/20 to-indigo-500/5 border-indigo-500/30",
+      iconColor: "text-indigo-400",
+    },
+    {
+      label: "Perfiles Deportivos",
+      value: metrics?.sports || 0,
+      icon: Trophy,
+      color: "from-amber-500/20 to-amber-500/5 border-amber-500/30",
+      iconColor: "text-amber-400",
+    },
+    {
+      label: "Músculos Mapeados",
+      value: metrics?.muscles || 0,
+      icon: Activity,
+      color: "from-rose-500/20 to-rose-500/5 border-rose-500/30",
+      iconColor: "text-rose-400",
+    },
+    {
+      label: "Grupos Musculares",
+      value: metrics?.muscleGroups || 0,
+      icon: Layers,
+      color: "from-emerald-500/20 to-emerald-500/5 border-emerald-500/30",
+      iconColor: "text-emerald-400",
+    },
+    {
+      label: "Equipamiento",
+      value: metrics?.equipment || 0,
+      icon: Package,
+      color: "from-sky-500/20 to-sky-500/5 border-sky-500/30",
+      iconColor: "text-sky-400",
+    },
+    {
+      label: "Patrones de Movimiento",
+      value: metrics?.patterns || 0,
+      icon: TrendingUp,
+      color: "from-purple-500/20 to-purple-500/5 border-purple-500/30",
+      iconColor: "text-purple-400",
+    },
+    {
+      label: "Métodos de Entrenamiento",
+      value: metrics?.trainingMethods || 0,
+      icon: Gauge,
+      color: "from-cyan-500/20 to-cyan-500/5 border-cyan-500/30",
+      iconColor: "text-cyan-400",
+    },
+    {
+      label: "Capacidades Físicas",
+      value: metrics?.physicalCapabilities || 0,
+      icon: Zap,
+      color: "from-yellow-500/20 to-yellow-500/5 border-yellow-500/30",
+      iconColor: "text-yellow-400",
+    },
+  ];
+
+  const systemOverview = [
+    {
+      title: "Base de Datos Biomecánica",
+      description: "Ontología completa de ejercicios con tags por capas: planos, vectores, SSC, impacto y patrones de movimiento.",
+      icon: Database,
+      stats: `${metrics?.exercises || 0} ejercicios × ${metrics?.patterns || 0} patrones`,
+    },
+    {
+      title: "Perfiles Deportivos",
+      description: "Análisis de demandas específicas por deporte: acciones clave, zonas de riesgo y prioridades físicas.",
+      icon: Target,
+      stats: `${metrics?.sports || 0} deportes catalogados`,
+    },
+    {
+      title: "Sistema Muscular",
+      description: "Mapeo completo de cadenas musculares, grupos y subgrupos para análisis de transferencia.",
+      icon: Users,
+      stats: `${metrics?.muscleGroups || 0} grupos × ${metrics?.muscles || 0} músculos`,
+    },
+  ];
+
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100">
       <Sidebar />
 
       <main className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
-        <section className="relative px-6 py-16 sm:px-12 lg:px-20">
+        {/* Header */}
+        <section className="relative px-6 py-12 sm:px-12 lg:px-20">
           <div className="absolute inset-0 -z-10 overflow-hidden">
             <div className="absolute inset-x-[-30%] top-10 h-64 rounded-full bg-indigo-500/20 blur-3xl" />
           </div>
 
-          <div className="max-w-5xl">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-1 text-sm uppercase tracking-widest text-indigo-200">
-              KronThor Performance
-            </span>
-
-            <h1 className="mt-6 text-4xl font-semibold leading-tight text-white sm:text-5xl">
-              La plataforma integral para planificacion deportiva inteligente.
-            </h1>
-
-            <p className="mt-6 text-lg text-slate-300">
-              Disenada para entrenadores, atletas y equipos de alto rendimiento.
-              Gestiona catalogos de ejercicios, capacidades fisicas y
-              dashboards de seguimiento desde un solo lugar.
-            </p>
-
-            <div className="mt-10 flex flex-wrap gap-4">
-              <Button className="bg-indigo-500 px-8 py-6 text-base hover:bg-indigo-400">
-                Entrar al panel
-              </Button>
-              <Button
-                variant="outline"
-                className="border-white/20 px-8 py-6 text-base text-white hover:bg-white/10"
-              >
-                Ver documentacion
-              </Button>
-            </div>
-          </div>
-
-          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {metrics.map((metric) => (
-              <div
-                key={metric.label}
-                className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur"
-              >
-                <p className="text-sm text-slate-300">{metric.label}</p>
-                <p className="mt-2 text-3xl font-semibold text-white">
-                  {metric.value}
-                </p>
+          <div className="max-w-7xl">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2.5 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-500/20">
+                <BarChart3 className="h-6 w-6 text-white" />
               </div>
-            ))}
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-200">
+                Panel de Control
+              </span>
+            </div>
+
+            <h1 className="text-4xl font-black tracking-tighter text-white uppercase">
+              Dashboard Kronthor
+            </h1>
+            <p className="mt-3 text-lg text-slate-300 font-medium max-w-3xl">
+              Visión general del ecosistema de planificación deportiva inteligente
+            </p>
           </div>
         </section>
 
-        <section className="px-6 py-12 sm:px-12 lg:px-20">
-          <div className="grid gap-6 lg:grid-cols-3">
-            {featureCards.map((feature) => {
-              const Icon = feature.icon;
-              return (
-                <div
-                  key={feature.title}
-                  className={`rounded-3xl border bg-gradient-to-b ${feature.accent} p-8 shadow-xl`}
-                >
-                  <div className="mb-6 flex size-12 items-center justify-center rounded-full bg-white/10">
-                    <Icon className="size-6 text-white" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-white">
-                    {feature.title}
-                  </h3>
-                  <p className="mt-3 text-slate-300">{feature.description}</p>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+        {/* Metrics Grid */}
+        <section className="px-6 sm:px-12 lg:px-20 pb-8">
+          <div className="max-w-7xl">
+            <h2 className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 mb-6">
+              Métricas del Sistema
+            </h2>
 
-        <section className="px-6 py-16 sm:px-12 lg:px-20">
-          <div className="grid gap-10 lg:grid-cols-2">
-            <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-indigo-200">
-                Flujo de trabajo
-              </p>
-              <h2 className="mt-4 text-3xl font-semibold text-white">
-                Del dato crudo a una experiencia de entrenamiento accionable.
-              </h2>
-              <p className="mt-4 text-slate-300">
-                Cada seccion de KronThor conecta catalogos, capacidades y
-                resultados para que el equipo se mantenga alineado y los atletas
-                reciban retroalimentacion inmediata.
-              </p>
-
-              <div className="mt-8 space-y-6">
-                {workflow.map((item, index) => (
-                  <div
-                    key={item.title}
-                    className="flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5"
-                  >
-                    <div className="flex size-10 items-center justify-center rounded-full bg-indigo-500/30 text-lg font-semibold text-white">
-                      {index + 1}
-                    </div>
-                    <div>
-                      <p className="text-lg font-semibold text-white">
-                        {item.title}
-                      </p>
-                      <p className="text-sm text-slate-300">{item.detail}</p>
-                    </div>
-                  </div>
+            {loading ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {[...Array(8)].map((_, i) => (
+                  <Skeleton key={i} className="h-32 w-full rounded-2xl bg-white/5" />
                 ))}
               </div>
-            </div>
-
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur">
-              <div className="flex flex-col gap-6">
-                <div className="rounded-2xl bg-slate-900/70 p-6">
-                  <div className="flex items-center gap-3 text-sm text-slate-300">
-                    <ShieldCheck className="size-4 text-emerald-300" />
-                    Seguridad y control granular
-                  </div>
-                  <p className="mt-3 text-lg text-white">
-                    Roles, equipos y permisos adaptados a academias, clubes y
-                    centros de alto rendimiento.
-                  </p>
-                </div>
-
-                <div className="rounded-2xl bg-slate-900/70 p-6">
-                  <div className="flex items-center gap-3 text-sm text-slate-300">
-                    <Users className="size-4 text-sky-300" />
-                    Colaboracion en vivo
-                  </div>
-                  <p className="mt-3 text-lg text-white">
-                    Comentarios, historial y vistas compartidas mantienen al
-                    staff sincronizado mientras los atletas reciben feedback al
-                    instante.
-                  </p>
-                </div>
-
-                <div className="rounded-2xl bg-slate-900/70 p-6">
-                  <div className="flex items-center gap-3 text-sm text-slate-300">
-                    <Zap className="size-4 text-yellow-300" />
-                    Integraciones listas
-                  </div>
-                  <p className="mt-3 text-lg text-white">
-                    API abierta y conectores hacia wearables, sensores y otros
-                    sistemas ya presentes en tu flujo.
-                  </p>
-                </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {statCards.map((stat) => {
+                  const Icon = stat.icon;
+                  return (
+                    <Card
+                      key={stat.label}
+                      className={`glass-card border bg-gradient-to-b ${stat.color} hover:scale-105 transition-transform duration-200`}
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className={`p-2.5 bg-white/10 rounded-xl ${stat.iconColor}`}>
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div className="text-right">
+                            <p className="text-3xl font-black text-white">
+                              {stat.value}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                          {stat.label}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
+            )}
+          </div>
+        </section>
+
+        {/* System Overview */}
+        <section className="px-6 sm:px-12 lg:px-20 pb-12">
+          <div className="max-w-7xl">
+            <h2 className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 mb-6">
+              Resumen del Ecosistema
+            </h2>
+
+            <div className="grid gap-6 lg:grid-cols-3">
+              {systemOverview.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Card
+                    key={item.title}
+                    className="glass-card border-white/10 bg-white/[0.02] hover:border-indigo-500/30 transition-all duration-300"
+                  >
+                    <CardContent className="p-8">
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="p-3 bg-indigo-500/10 rounded-xl">
+                          <Icon className="h-6 w-6 text-indigo-400" />
+                        </div>
+                        <h3 className="text-lg font-black text-white uppercase tracking-tight">
+                          {item.title}
+                        </h3>
+                      </div>
+                      <p className="text-sm text-slate-300 mb-4 leading-relaxed">
+                        {item.description}
+                      </p>
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg border border-white/10">
+                        <div className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                        <span className="text-xs font-bold text-slate-300">
+                          {item.stats}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
+          </div>
+        </section>
+
+        {/* Quick Stats Bar */}
+        <section className="px-6 sm:px-12 lg:px-20 pb-12">
+          <div className="max-w-7xl">
+            <Card className="glass-card border-white/10 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10">
+              <CardContent className="p-8">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                  <div className="text-center">
+                    <p className="text-4xl font-black text-white mb-2">
+                      {((metrics?.exercises || 0) / (metrics?.sports || 1)).toFixed(0)}
+                    </p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                      Ejercicios por Deporte
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-4xl font-black text-white mb-2">
+                      {metrics?.patterns || 0}
+                    </p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                      Patrones Biomecánicos
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-4xl font-black text-white mb-2">
+                      {metrics?.trainingMethods || 0}
+                    </p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                      Métodos Validados
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-4xl font-black text-white mb-2">
+                      {metrics?.physicalCapabilities || 0}
+                    </p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                      Capacidades Físicas
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </section>
       </main>
