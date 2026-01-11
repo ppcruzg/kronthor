@@ -1,3 +1,5 @@
+"use client";
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-900 via-black to-gray-900 text-white flex flex-col items-center justify-center p-8">
