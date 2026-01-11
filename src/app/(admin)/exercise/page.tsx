@@ -199,7 +199,7 @@ export default function ExercisesCatalogModern() {
             {/* Header */}
             <div className="flex justify-between items-center px-4 shrink-0">
                 <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-500/20">
+                    <div className="p-2.5 bg-blue-600 dark:bg-blue-600 rounded-xl shadow-lg shadow-blue-500/20">
                         <Dumbbell className="h-6 w-6 text-white" />
                     </div>
                     <div>
@@ -215,8 +215,8 @@ export default function ExercisesCatalogModern() {
             {/* Main Content Area */}
             <div className="flex-1 flex gap-4 min-h-0 px-4 pb-4">
                 {/* Left Pane: List */}
-                <div className="w-80 shrink-0 flex flex-col gap-4 min-h-0 bg-white dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
-                    <div className="p-4 border-b border-slate-100 dark:border-white/5 space-y-3 bg-slate-50/50 dark:bg-transparent">
+                <div className="w-80 shrink-0 flex flex-col gap-4 min-h-0 bg-white dark:bg-slate-950/80 rounded-3xl border border-slate-200 dark:border-white/10 overflow-hidden shadow-sm">
+                    <div className="p-4 border-b border-slate-100 dark:border-white/10 space-y-3 bg-slate-50/50 dark:bg-slate-900/50">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 font-bold" />
                             <Input
@@ -246,7 +246,7 @@ export default function ExercisesCatalogModern() {
                                         className={cn(
                                             "w-full text-left p-4 rounded-2xl transition-all duration-200 flex items-center justify-between group",
                                             finalSelectedId === ex.id
-                                                ? "bg-indigo-600 shadow-lg shadow-indigo-600/20 text-white"
+                                                ? "bg-blue-600 shadow-lg shadow-blue-600/20 text-white"
                                                 : "hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400"
                                         )}
                                     >
@@ -254,11 +254,11 @@ export default function ExercisesCatalogModern() {
                                             <div className={cn("text-sm font-black truncate uppercase tracking-tight", finalSelectedId === ex.id ? "text-white" : "text-slate-900 dark:text-slate-200")}>
                                                 {ex.name_es}
                                             </div>
-                                            <div className={cn("text-[10px] font-bold truncate opacity-70 italic", selectedId === ex.id ? "text-indigo-100" : "text-slate-500")}>
+                                            <div className={cn("text-[10px] font-bold truncate opacity-70 italic", finalSelectedId === ex.id ? "text-blue-100" : "text-slate-500")}>
                                                 {ex.name_en || ex.name_es}
                                             </div>
                                         </div>
-                                        <ChevronRight className={cn("h-4 w-4 transition-transform", selectedId === ex.id ? "scale-110 opacity-100" : "opacity-0 group-hover:opacity-100 translate-x-[-4px] group-hover:translate-x-0")} />
+                                        <ChevronRight className={cn("h-4 w-4 transition-transform", finalSelectedId === ex.id ? "scale-110 opacity-100" : "opacity-0 group-hover:opacity-100 translate-x-[-4px] group-hover:translate-x-0")} />
                                     </button>
                                 ))}
                             </div>
@@ -267,14 +267,14 @@ export default function ExercisesCatalogModern() {
                 </div>
 
                 {/* Right Pane: Details & Analysis */}
-                <div className="flex-1 min-h-0 bg-white dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm flex flex-col">
+                <div className="flex-1 min-h-0 bg-white dark:bg-slate-950/80 rounded-3xl border border-slate-200 dark:border-white/10 overflow-hidden shadow-sm flex flex-col">
                     {selectedExercise ? (
                         <>
                             {/* Detail Header */}
-                            <div className="p-8 border-b border-slate-100 dark:border-white/5 flex justify-between items-start bg-slate-50/30 dark:bg-transparent">
+                            <div className="p-8 border-b border-slate-100 dark:border-white/10 flex justify-between items-start bg-slate-50/30 dark:bg-slate-900/50">
                                 <div className="space-y-3 max-w-4xl">
                                     <div className="flex items-center gap-3">
-                                        <Badge className="bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20 px-3 py-1 font-black text-[10px] uppercase tracking-widest">
+                                        <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20 hover:bg-blue-500/20 px-3 py-1 font-black text-[10px] uppercase tracking-widest">
                                             {selectedExercise.exercise_type?.name || "STANDARD"}
                                         </Badge>
                                         <Badge variant="outline" className={cn(

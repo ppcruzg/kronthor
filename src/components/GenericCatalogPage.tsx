@@ -144,7 +144,7 @@ export function GenericCatalogPage({ tableName, title, description, icon }: Gene
                 </div>
 
                 {/* Filters */}
-                <Card className="glass-card border-white/5 bg-white/[0.02]">
+                <Card className="glass-card border-white/10 bg-white/[0.02] dark:bg-slate-950/50">
                     <CardContent className="pt-6">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -161,26 +161,26 @@ export function GenericCatalogPage({ tableName, title, description, icon }: Gene
                 {/* Grid / List */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {loading ? (
-                        [...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-2xl bg-white/5" />)
+                        [...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-2xl bg-white/5 dark:bg-slate-950/50" />)
                     ) : (
                         paginated.map((x) => (
-                            <Card key={x.id} className="glass-card border-white/5 bg-white/[0.02] hover:neon-border transition-all group">
+                            <Card key={x.id} className="glass-card border-white/10 bg-white/[0.02] dark:bg-slate-950/50 hover:neon-border transition-all group shadow-lg dark:shadow-none">
                                 <CardContent className="p-5 flex justify-between items-start">
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-indigo-500/10 rounded-lg">
-                                                <Tag className="h-4 w-4 text-indigo-400" />
+                                            <div className="p-2 bg-blue-500/10 rounded-lg">
+                                                <Tag className="h-4 w-4 text-blue-500 dark:text-blue-400" />
                                             </div>
                                             <h3 className="text-xl font-bold tracking-tight">{x.name}</h3>
                                             {x.code && <Badge className="bg-white/10 text-slate-300 border-none text-[10px]">{x.code}</Badge>}
                                         </div>
                                         <p className="text-sm text-slate-400 line-clamp-2">{x.description || "Sin descripción."}</p>
                                     </div>
-                                    <div className="flex gap-1 opacity-0 group-hover:opacity-101 transition-opacity">
-                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10" onClick={() => { setEditing(x); setOpen(true); }}>
+                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500 dark:text-blue-400 hover:text-blue-400 hover:bg-blue-500/10" onClick={() => { setEditing(x); setOpen(true); }}>
                                             <Pencil className="h-4 w-4" />
                                         </Button>
-                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10" onClick={() => setToDelete(x)}>
+                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-rose-500 dark:text-rose-400 hover:text-rose-400 hover:bg-rose-500/10" onClick={() => setToDelete(x)}>
                                             <Trash className="h-4 w-4" />
                                         </Button>
                                     </div>
