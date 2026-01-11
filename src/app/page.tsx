@@ -86,57 +86,57 @@ export default function Dashboard() {
       label: "Ejercicios Catalogados",
       value: metrics?.exercises || 0,
       icon: Dumbbell,
-      color: "from-indigo-500/20 to-indigo-500/5 border-indigo-500/30",
-      iconColor: "text-indigo-400",
+      color: "from-blue-600/30 to-blue-700/10 border-blue-500/40",
+      iconColor: "text-blue-500 dark:text-blue-400",
     },
     {
       label: "Perfiles Deportivos",
       value: metrics?.sports || 0,
       icon: Trophy,
-      color: "from-amber-500/20 to-amber-500/5 border-amber-500/30",
-      iconColor: "text-amber-400",
+      color: "from-orange-600/30 to-orange-700/10 border-orange-500/40",
+      iconColor: "text-orange-600 dark:text-orange-400",
     },
     {
       label: "Músculos Mapeados",
       value: metrics?.muscles || 0,
       icon: Activity,
-      color: "from-rose-500/20 to-rose-500/5 border-rose-500/30",
-      iconColor: "text-rose-400",
+      color: "from-red-600/30 to-red-700/10 border-red-500/40",
+      iconColor: "text-red-600 dark:text-red-400",
     },
     {
       label: "Grupos Musculares",
       value: metrics?.muscleGroups || 0,
       icon: Layers,
-      color: "from-emerald-500/20 to-emerald-500/5 border-emerald-500/30",
-      iconColor: "text-emerald-400",
+      color: "from-green-600/30 to-green-700/10 border-green-500/40",
+      iconColor: "text-green-600 dark:text-green-400",
     },
     {
       label: "Equipamiento",
       value: metrics?.equipment || 0,
       icon: Package,
-      color: "from-sky-500/20 to-sky-500/5 border-sky-500/30",
-      iconColor: "text-sky-400",
+      color: "from-cyan-600/30 to-cyan-700/10 border-cyan-500/40",
+      iconColor: "text-cyan-600 dark:text-cyan-400",
     },
     {
       label: "Patrones de Movimiento",
       value: metrics?.patterns || 0,
       icon: TrendingUp,
-      color: "from-purple-500/20 to-purple-500/5 border-purple-500/30",
-      iconColor: "text-purple-400",
+      color: "from-purple-600/30 to-purple-700/10 border-purple-500/40",
+      iconColor: "text-purple-600 dark:text-purple-400",
     },
     {
       label: "Métodos de Entrenamiento",
       value: metrics?.trainingMethods || 0,
       icon: Gauge,
-      color: "from-cyan-500/20 to-cyan-500/5 border-cyan-500/30",
-      iconColor: "text-cyan-400",
+      color: "from-teal-600/30 to-teal-700/10 border-teal-500/40",
+      iconColor: "text-teal-600 dark:text-teal-400",
     },
     {
       label: "Capacidades Físicas",
       value: metrics?.physicalCapabilities || 0,
       icon: Zap,
-      color: "from-yellow-500/20 to-yellow-500/5 border-yellow-500/30",
-      iconColor: "text-yellow-400",
+      color: "from-yellow-600/30 to-yellow-700/10 border-yellow-500/40",
+      iconColor: "text-yellow-600 dark:text-yellow-500",
     },
   ];
 
@@ -280,7 +280,7 @@ export default function Dashboard() {
         {/* Quick Stats Bar */}
         <section className="px-6 sm:px-12 lg:px-20 pb-12">
           <div className="max-w-7xl">
-            <Card className="border-slate-200 dark:border-white/10 bg-gradient-to-r from-indigo-100 via-purple-100 to-pink-100 dark:from-indigo-500/10 dark:via-purple-500/10 dark:to-pink-500/10 shadow-lg dark:shadow-none">
+            <Card className="border-slate-200 dark:border-white/10 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-red-600/20 dark:from-blue-600/15 dark:via-purple-600/15 dark:to-red-600/15 shadow-lg dark:shadow-none">
               <CardContent className="p-8">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                   <div className="text-center">
