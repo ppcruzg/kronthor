@@ -31,9 +31,11 @@ import {
   Target,
   ShieldAlert,
   Zap,
+  Users,
 } from 'lucide-react';
 
 import { ThemeToggle } from '@/components/theme-toggle';
+import packageInfo from '../../../package.json';
 
 interface NavItem {
   href: string;
@@ -170,7 +172,7 @@ export default function Sidebar() {
         </div>
         {!collapsed && (
           <div className="mt-2 text-xs text-gray-400">
-            Versión: 25.11.19.B
+            Versión: {packageInfo.version}
           </div>
         )}
       </div>

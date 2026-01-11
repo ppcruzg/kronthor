@@ -1,6 +1,6 @@
 {
   "name": "kronthor",
-  "version": "0.1.0",
+  "version": "26.01.10a",
   "private": true,
   "scripts": {
     "dev": "next dev",
