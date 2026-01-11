@@ -61,7 +61,7 @@ type NavSection =
 const navSections: NavSection[] = [
   {
     type: 'item',
-    href: '/dash',
+    href: '/',
     label: 'Dashboard',
     icon: <LayoutDashboard />,
   },
