@@ -203,7 +203,7 @@ export default function SportsDashboardMasterDetail() {
             {/* Header */}
             <div className="flex justify-between items-center px-4 shrink-0">
                 <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-500/20">
+                    <div className="p-2.5 bg-orange-600 dark:bg-orange-600 rounded-xl shadow-lg shadow-orange-500/20">
                         <Trophy className="h-6 w-6 text-white" />
                     </div>
                     <div>
@@ -219,15 +219,15 @@ export default function SportsDashboardMasterDetail() {
             {/* Main Content Area */}
             <div className="flex-1 flex gap-4 min-h-0 px-4 pb-4">
                 {/* Left Pane: List */}
-                <div className="w-80 shrink-0 flex flex-col gap-4 min-h-0 bg-white dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
-                    <div className="p-4 border-b border-slate-100 dark:border-white/5 space-y-3 bg-slate-50/50 dark:bg-transparent">
+                <div className="w-80 shrink-0 flex flex-col gap-4 min-h-0 bg-white dark:bg-slate-950/80 rounded-3xl border border-slate-200 dark:border-white/10 overflow-hidden shadow-sm">
+                    <div className="p-4 border-b border-slate-100 dark:border-white/10 space-y-3 bg-slate-50/50 dark:bg-slate-900/50">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 font-bold" />
                             <Input
                                 placeholder="Buscar perfil..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="pl-10 h-11 bg-white dark:bg-slate-950 border-slate-200 dark:border-white/10 rounded-2xl text-slate-900 dark:text-slate-100 font-bold placeholder:text-slate-400"
+                                className="pl-10 h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-2xl text-slate-900 dark:text-slate-100 font-bold placeholder:text-slate-400"
                             />
                         </div>
                         <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-500 tracking-widest px-1">
@@ -250,7 +250,7 @@ export default function SportsDashboardMasterDetail() {
                                         className={cn(
                                             "w-full text-left p-4 rounded-2xl transition-all duration-200 flex items-center justify-between group",
                                             selectedId === s.id
-                                                ? "bg-indigo-600 shadow-lg shadow-indigo-600/20 text-white"
+                                                ? "bg-orange-600 shadow-lg shadow-orange-600/20 text-white"
                                                 : "hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400"
                                         )}
                                     >
@@ -258,7 +258,7 @@ export default function SportsDashboardMasterDetail() {
                                             <div className={cn("text-sm font-black truncate uppercase tracking-tight", selectedId === s.id ? "text-white" : "text-slate-900 dark:text-slate-200")}>
                                                 {s.name}
                                             </div>
-                                            <div className={cn("text-[10px] font-bold truncate opacity-70 italic", selectedId === s.id ? "text-indigo-100" : "text-slate-500")}>
+                                            <div className={cn("text-[10px] font-bold truncate opacity-70 italic", selectedId === s.id ? "text-orange-100" : "text-slate-500")}>
                                                 {s.position_role || "Perfil general"}
                                             </div>
                                         </div>
@@ -271,7 +271,7 @@ export default function SportsDashboardMasterDetail() {
                 </div>
 
                 {/* Right Pane: Details & Analysis */}
-                <div className="flex-1 min-h-0 bg-white dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm flex flex-col">
+                <div className="flex-1 min-h-0 bg-white dark:bg-slate-950/80 rounded-3xl border border-slate-200 dark:border-white/10 overflow-hidden shadow-sm flex flex-col">
                     {selectedSport ? (
                         <>
                             {/* Detail Header */}
