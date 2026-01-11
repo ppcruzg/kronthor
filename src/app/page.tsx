@@ -162,30 +162,30 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
       <Sidebar />
 
-      <main className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
+      <main className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50 via-slate-100 to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
         {/* Header */}
         <section className="relative px-6 py-12 sm:px-12 lg:px-20">
           <div className="absolute inset-0 -z-10 overflow-hidden">
-            <div className="absolute inset-x-[-30%] top-10 h-64 rounded-full bg-indigo-500/20 blur-3xl" />
+            <div className="absolute inset-x-[-30%] top-10 h-64 rounded-full bg-indigo-200/40 dark:bg-indigo-500/20 blur-3xl" />
           </div>
 
           <div className="max-w-7xl">
             <div className="flex items-center gap-3 mb-2">
-              <div className="p-2.5 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-500/20">
+              <div className="p-2.5 bg-indigo-500 dark:bg-indigo-600 rounded-xl shadow-lg shadow-indigo-500/20">
                 <BarChart3 className="h-6 w-6 text-white" />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-200">
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-600 dark:text-indigo-200">
                 Panel de Control
               </span>
             </div>
 
-            <h1 className="text-4xl font-black tracking-tighter text-white uppercase">
+            <h1 className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white uppercase">
               Dashboard Kronthor
             </h1>
-            <p className="mt-3 text-lg text-slate-300 font-medium max-w-3xl">
+            <p className="mt-3 text-lg text-slate-600 dark:text-slate-300 font-medium max-w-3xl">
               Visión general del ecosistema de planificación deportiva inteligente
             </p>
           </div>
@@ -194,14 +194,14 @@ export default function Dashboard() {
         {/* Metrics Grid */}
         <section className="px-6 sm:px-12 lg:px-20 pb-8">
           <div className="max-w-7xl">
-            <h2 className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 mb-6">
+            <h2 className="text-xs font-black uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400 mb-6">
               Métricas del Sistema
             </h2>
 
             {loading ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {[...Array(8)].map((_, i) => (
-                  <Skeleton key={i} className="h-32 w-full rounded-2xl bg-white/5" />
+                  <Skeleton key={i} className="h-32 w-full rounded-2xl bg-slate-200 dark:bg-white/5" />
                 ))}
               </div>
             ) : (
@@ -211,20 +211,20 @@ export default function Dashboard() {
                   return (
                     <Card
                       key={stat.label}
-                      className={`glass-card border bg-gradient-to-b ${stat.color} hover:scale-105 transition-transform duration-200`}
+                      className={`border bg-gradient-to-b ${stat.color} hover:scale-105 transition-transform duration-200 shadow-lg dark:shadow-none`}
                     >
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between mb-4">
-                          <div className={`p-2.5 bg-white/10 rounded-xl ${stat.iconColor}`}>
+                          <div className={`p-2.5 bg-white/20 dark:bg-white/10 rounded-xl ${stat.iconColor}`}>
                             <Icon className="h-5 w-5" />
                           </div>
                           <div className="text-right">
-                            <p className="text-3xl font-black text-white">
+                            <p className="text-3xl font-black text-slate-900 dark:text-white">
                               {stat.value}
                             </p>
                           </div>
                         </div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                           {stat.label}
                         </p>
                       </CardContent>
@@ -239,7 +239,7 @@ export default function Dashboard() {
         {/* System Overview */}
         <section className="px-6 sm:px-12 lg:px-20 pb-12">
           <div className="max-w-7xl">
-            <h2 className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 mb-6">
+            <h2 className="text-xs font-black uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400 mb-6">
               Resumen del Ecosistema
             </h2>
 
@@ -249,23 +249,23 @@ export default function Dashboard() {
                 return (
                   <Card
                     key={item.title}
-                    className="glass-card border-white/10 bg-white/[0.02] hover:border-indigo-500/30 transition-all duration-300"
+                    className="border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.02] hover:border-indigo-300 dark:hover:border-indigo-500/30 transition-all duration-300 shadow-md dark:shadow-none"
                   >
                     <CardContent className="p-8">
                       <div className="flex items-center gap-4 mb-4">
-                        <div className="p-3 bg-indigo-500/10 rounded-xl">
-                          <Icon className="h-6 w-6 text-indigo-400" />
+                        <div className="p-3 bg-indigo-100 dark:bg-indigo-500/10 rounded-xl">
+                          <Icon className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
                         </div>
-                        <h3 className="text-lg font-black text-white uppercase tracking-tight">
+                        <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">
                           {item.title}
                         </h3>
                       </div>
-                      <p className="text-sm text-slate-300 mb-4 leading-relaxed">
+                      <p className="text-sm text-slate-600 dark:text-slate-300 mb-4 leading-relaxed">
                         {item.description}
                       </p>
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg border border-white/10">
-                        <div className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
-                        <span className="text-xs font-bold text-slate-300">
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
+                        <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 animate-pulse" />
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
                           {item.stats}
                         </span>
                       </div>
@@ -280,38 +280,38 @@ export default function Dashboard() {
         {/* Quick Stats Bar */}
         <section className="px-6 sm:px-12 lg:px-20 pb-12">
           <div className="max-w-7xl">
-            <Card className="glass-card border-white/10 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10">
+            <Card className="border-slate-200 dark:border-white/10 bg-gradient-to-r from-indigo-100 via-purple-100 to-pink-100 dark:from-indigo-500/10 dark:via-purple-500/10 dark:to-pink-500/10 shadow-lg dark:shadow-none">
               <CardContent className="p-8">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                   <div className="text-center">
-                    <p className="text-4xl font-black text-white mb-2">
+                    <p className="text-4xl font-black text-slate-900 dark:text-white mb-2">
                       {((metrics?.exercises || 0) / (metrics?.sports || 1)).toFixed(0)}
                     </p>
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                       Ejercicios por Deporte
                     </p>
                   </div>
                   <div className="text-center">
-                    <p className="text-4xl font-black text-white mb-2">
+                    <p className="text-4xl font-black text-slate-900 dark:text-white mb-2">
                       {metrics?.patterns || 0}
                     </p>
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                       Patrones Biomecánicos
                     </p>
                   </div>
                   <div className="text-center">
-                    <p className="text-4xl font-black text-white mb-2">
+                    <p className="text-4xl font-black text-slate-900 dark:text-white mb-2">
                       {metrics?.trainingMethods || 0}
                     </p>
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                       Métodos Validados
                     </p>
                   </div>
                   <div className="text-center">
-                    <p className="text-4xl font-black text-white mb-2">
+                    <p className="text-4xl font-black text-slate-900 dark:text-white mb-2">
                       {metrics?.physicalCapabilities || 0}
                     </p>
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                       Capacidades Físicas
                     </p>
                   </div>
