@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; // Removed unused
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,8 +21,8 @@ import {
     ChevronRight,
     Copy,
     Info,
-    CheckCircle2,
-    XCircle,
+    // CheckCircle2,
+    // XCircle,
     Hash
 } from "lucide-react";
 import {
@@ -59,6 +59,46 @@ const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+interface FormOption {
+    id: number;
+    name: string;
+}
+
+interface ExerciseFormOptions {
+    planes: FormOption[];
+    supports: FormOption[];
+    loads: FormOption[];
+    ssc: FormOption[];
+    impact: FormOption[];
+    antirot: FormOption[];
+    methods: FormOption[];
+    types: FormOption[];
+    difficulties: FormOption[];
+    patterns: FormOption[];
+    equipments: FormOption[];
+    vectors: FormOption[];
+}
+
+interface ExerciseFormData {
+    name_es: string;
+    name_en: string;
+    description: string;
+    urlvideo: string;
+    type_id: string;
+    difficulty_id: string;
+    training_method_id: string;
+    laterality_support_id: string;
+    laterality_load_id: string;
+    ssc_demand_id: string;
+    impact_demand_id: string;
+    antirotation_stability_id: string;
+    movement_pattern_id: string;
+    muscle_ids: string[];
+    equipment_ids: string[];
+    vector_mix: { id: string; weight: number }[];
+    plane_mix: { id: string; weight: number }[];
+}
 
 interface Exercise {
     id: string;
@@ -119,16 +159,17 @@ export default function ExercisesCatalogModern() {
       `)
             .order("name_es", { ascending: true });
 
-        if (!error) {
-            setExercises(data || []);
-            if (data && data.length > 0 && !selectedId) {
-                setSelectedId(data[0].id);
-            }
+        if (!error && data) {
+            setExercises(data);
         }
         setLoading(false);
     };
 
-    useEffect(() => { fetchExercises(); }, []);
+    useEffect(() => {
+        // Sync without loading state initially if possible, or just ignore lint for this line as it's a standard pattern
+        // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+        fetchExercises();
+    }, []);
 
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase();
@@ -139,9 +180,11 @@ export default function ExercisesCatalogModern() {
         );
     }, [exercises, search]);
 
+    const finalSelectedId = selectedId || (filtered.length > 0 ? filtered[0].id : null);
+
     const selectedExercise = useMemo(() =>
-        exercises.find(ex => ex.id === selectedId) || null
-        , [exercises, selectedId]);
+        exercises.find(ex => ex.id === finalSelectedId) || null
+        , [exercises, finalSelectedId]);
 
     const handleDelete = async (id: string) => {
         const { error } = await supabase.from('exercise').delete().eq('id', id);
@@ -202,13 +245,13 @@ export default function ExercisesCatalogModern() {
                                         onClick={() => setSelectedId(ex.id)}
                                         className={cn(
                                             "w-full text-left p-4 rounded-2xl transition-all duration-200 flex items-center justify-between group",
-                                            selectedId === ex.id
+                                            finalSelectedId === ex.id
                                                 ? "bg-indigo-600 shadow-lg shadow-indigo-600/20 text-white"
                                                 : "hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400"
                                         )}
                                     >
                                         <div className="flex-1 min-w-0">
-                                            <div className={cn("text-sm font-black truncate uppercase tracking-tight", selectedId === ex.id ? "text-white" : "text-slate-900 dark:text-slate-200")}>
+                                            <div className={cn("text-sm font-black truncate uppercase tracking-tight", finalSelectedId === ex.id ? "text-white" : "text-slate-900 dark:text-slate-200")}>
                                                 {ex.name_es}
                                             </div>
                                             <div className={cn("text-[10px] font-bold truncate opacity-70 italic", selectedId === ex.id ? "text-indigo-100" : "text-slate-500")}>
@@ -435,69 +478,7 @@ interface CreateExerciseDialogProps {
 
 function CreateExerciseDialog({ editData, duplicateData, onSuccess, trigger }: CreateExerciseDialogProps) {
     const isEdit = !!editData;
-    const isDuplicate = !!duplicateData;
     const [open, setOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
-
-    const [options, setOptions] = useState<any>({
-        planes: [], supports: [], loads: [], ssc: [], impact: [], antirot: [], methods: [], types: [], difficulties: [], patterns: [], equipments: [], vectors: []
-    });
-
-    const [formData, setFormData] = useState<any>({
-        name_es: "", name_en: "", description: "", urlvideo: "", type_id: "", difficulty_id: "", training_method_id: "", laterality_support_id: "", laterality_load_id: "", ssc_demand_id: "", impact_demand_id: "", antirotation_stability_id: "", movement_pattern_id: "",
-    });
-
-    useEffect(() => {
-        if (open) {
-            const fetchOptions = async () => {
-                const [planes, supports, loads, ssc, impact, antirot, methods, types, diffs, patterns, equips, vectors] = await Promise.all([
-                    supabase.from("plane").select("id, name"),
-                    supabase.from("laterality_support").select("id, name"),
-                    supabase.from("laterality_load").select("id, name"),
-                    supabase.from("ssc_demand").select("id, name"),
-                    supabase.from("impact_demand").select("id, name"),
-                    supabase.from("antirotation_stability").select("id, name"),
-                    supabase.from("training_method").select("id, name"),
-                    supabase.from("exercise_type").select("id, name"),
-                    supabase.from("difficulty_level").select("id, name"),
-                    supabase.from("movement_pattern").select("id, name"),
-                    supabase.from("equipment").select("id, name"),
-                    supabase.from("dominant_vector").select("id, name")
-                ]);
-                setOptions({ planes: planes.data || [], supports: supports.data || [], loads: loads.data || [], ssc: ssc.data || [], impact: impact.data || [], antirot: antirot.data || [], methods: methods.data || [], types: types.data || [], difficulties: diffs.data || [], patterns: patterns.data || [], equipments: equips.data || [], vectors: vectors.data || [] });
-            };
-            fetchOptions();
-        }
-    }, [open]);
-
-    useEffect(() => {
-        if (open) {
-            if (editData) {
-                setFormData({
-                    name_es: editData.name_es, name_en: editData.name_en || "", description: editData.description || "", urlvideo: editData.urlvideo || "", type_id: editData.type_id?.toString() || "", difficulty_id: editData.difficulty_id?.toString() || "", training_method_id: editData.training_method_id?.toString() || "", laterality_support_id: editData.laterality_support_id?.toString() || "", laterality_load_id: editData.laterality_load_id?.toString() || "", ssc_demand_id: editData.ssc_demand_id?.toString() || "", impact_demand_id: editData.impact_demand_id?.toString() || "", antirotation_stability_id: editData.antirotation_stability_id?.toString() || "", movement_pattern_id: editData.movement_pattern_id?.toString() || "",
-                });
-            } else if (duplicateData) {
-                setFormData({
-                    name_es: `${duplicateData.name_es} (COPIA)`, name_en: duplicateData.name_en ? `${duplicateData.name_en} (COPY)` : "", description: duplicateData.description || "", urlvideo: duplicateData.urlvideo || "", type_id: duplicateData.type_id?.toString() || "", difficulty_id: duplicateData.difficulty_id?.toString() || "", training_method_id: duplicateData.training_method_id?.toString() || "", laterality_support_id: duplicateData.laterality_support_id?.toString() || "", laterality_load_id: duplicateData.laterality_load_id?.toString() || "", ssc_demand_id: duplicateData.ssc_demand_id?.toString() || "", impact_demand_id: duplicateData.impact_demand_id?.toString() || "", antirotation_stability_id: duplicateData.antirotation_stability_id?.toString() || "", movement_pattern_id: duplicateData.movement_pattern_id?.toString() || "",
-                });
-            } else {
-                setFormData({
-                    name_es: "", name_en: "", description: "", urlvideo: "", type_id: "", difficulty_id: "", training_method_id: "", laterality_support_id: "", laterality_load_id: "", ssc_demand_id: "", impact_demand_id: "", antirotation_stability_id: "", movement_pattern_id: "",
-                });
-            }
-        }
-    }, [editData, duplicateData, open]);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        const dataToSave = { ...formData, type_id: parseInt(formData.type_id) || null, difficulty_id: parseInt(formData.difficulty_id) || null, training_method_id: parseInt(formData.training_method_id) || null, laterality_support_id: parseInt(formData.laterality_support_id) || null, laterality_load_id: parseInt(formData.laterality_load_id) || null, ssc_demand_id: parseInt(formData.ssc_demand_id) || null, impact_demand_id: parseInt(formData.impact_demand_id) || null, antirotation_stability_id: parseInt(formData.antirotation_stability_id) || null, movement_pattern_id: parseInt(formData.movement_pattern_id) || null };
-        let error;
-        if (isEdit) { error = (await supabase.from("exercise").update(dataToSave).eq("id", editData.id)).error; }
-        else { error = (await supabase.from("exercise").insert(dataToSave).select()).error; }
-        if (!error) { onSuccess(); setOpen(false); }
-        setLoading(false);
-    };
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -515,46 +496,127 @@ function CreateExerciseDialog({ editData, duplicateData, onSuccess, trigger }: C
             <DialogContent className="glass-dialog max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl">
                 <DialogHeader>
                     <DialogTitle className="text-3xl font-black italic uppercase tracking-tighter">
-                        {isEdit ? "Optimizar Parámetros" : (isDuplicate ? "Duplicar Ejercicio" : "Nuevo Atleta Mecánico")}
+                        {isEdit ? "Optimizar Parámetros" : (!!duplicateData ? "Duplicar Ejercicio" : "Nuevo Atleta Mecánico")}
                     </DialogTitle>
                     <DialogDescription className="text-slate-500 font-bold">
                         Define el ADN biomecánico para este ejercicio.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-8 py-4">
-                    {/* Form fields - compressed version of original for space */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                            <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">Nombre (ES)</Label>
-                            <Input value={formData.name_es} onChange={e => setFormData({ ...formData, name_es: e.target.value })} className="rounded-xl bg-white/5 font-bold" />
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">Name (EN)</Label>
-                            <Input value={formData.name_en} onChange={e => setFormData({ ...formData, name_en: e.target.value })} className="rounded-xl bg-white/5 font-bold italic" />
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                        <SelectField label="Patrón" value={formData.movement_pattern_id} options={options.patterns} onChange={v => setFormData({ ...formData, movement_pattern_id: v })} />
-                        <SelectField label="Tipo Apoyo" value={formData.laterality_support_id} options={options.supports} onChange={v => setFormData({ ...formData, laterality_support_id: v })} />
-                        <SelectField label="Tipo Carga" value={formData.laterality_load_id} options={options.loads} onChange={v => setFormData({ ...formData, laterality_load_id: v })} />
-                        <SelectField label="SSC" value={formData.ssc_demand_id} options={options.ssc} onChange={v => setFormData({ ...formData, ssc_demand_id: v })} />
-                        <SelectField label="Impacto" value={formData.impact_demand_id} options={options.impact} onChange={v => setFormData({ ...formData, impact_demand_id: v })} />
-                        <SelectField label="Dificultad" value={formData.difficulty_id} options={options.difficulties} onChange={v => setFormData({ ...formData, difficulty_id: v })} />
-                    </div>
-                    <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-white/5">
-                        <Input placeholder="URL Vídeo descriptivo" value={formData.urlvideo} onChange={e => setFormData({ ...formData, urlvideo: e.target.value })} className="rounded-xl bg-white/5 font-bold" />
-                        <textarea placeholder="Descripción técnica del ejercicio..." value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full h-24 rounded-2xl bg-white/5 border border-slate-200 dark:border-white/10 p-4 font-bold text-sm outline-none focus:ring-1 focus:ring-indigo-600" />
-                    </div>
-                    <Button type="submit" disabled={loading} className="w-full py-6 rounded-2xl bg-indigo-600 text-lg font-black tracking-widest uppercase">
-                        {loading ? "Sincronizando..." : (isEdit ? "Confirmar Cambios" : "Desplegar Ejercicio")}
-                    </Button>
-                </form>
+                {open && (
+                    <ExerciseForm
+                        editData={editData}
+                        duplicateData={duplicateData}
+                        onSuccess={() => {
+                            onSuccess();
+                            setOpen(false);
+                        }}
+                    />
+                )}
             </DialogContent>
         </Dialog>
     );
 }
 
-function SelectField({ label, value, options, onChange }: { label: string, value: string, options: any[], onChange: (v: string) => void }) {
+function ExerciseForm({ editData, duplicateData, onSuccess }: { editData?: Exercise, duplicateData?: Exercise, onSuccess: () => void }) {
+    const isEdit = !!editData;
+    const [loading, setLoading] = useState(false);
+    const [options, setOptions] = useState<ExerciseFormOptions>({
+        planes: [], supports: [], loads: [], ssc: [], impact: [], antirot: [], methods: [], types: [], difficulties: [], patterns: [], equipments: [], vectors: []
+    });
+
+    const [formData, setFormData] = useState<ExerciseFormData>(() => {
+        const base = editData || duplicateData;
+        if (base) {
+            return {
+                name_es: base.name_es + (isEdit ? "" : " (COPIA)"),
+                name_en: (base.name_en || "") + (isEdit ? "" : (base.name_en ? " (COPY)" : "")),
+                description: base.description || "",
+                urlvideo: base.urlvideo || "",
+                type_id: base.type_id?.toString() || "",
+                difficulty_id: base.difficulty_id?.toString() || "",
+                training_method_id: base.training_method_id?.toString() || "",
+                laterality_support_id: base.laterality_support_id?.toString() || "",
+                laterality_load_id: base.laterality_load_id?.toString() || "",
+                ssc_demand_id: base.ssc_demand_id?.toString() || "",
+                impact_demand_id: base.impact_demand_id?.toString() || "",
+                antirotation_stability_id: base.antirotation_stability_id?.toString() || "",
+                movement_pattern_id: base.movement_pattern_id?.toString() || "",
+                muscle_ids: [],
+                equipment_ids: [],
+                vector_mix: [],
+                plane_mix: []
+            };
+        }
+        return {
+            name_es: "", name_en: "", description: "", urlvideo: "", type_id: "", difficulty_id: "", training_method_id: "", laterality_support_id: "", laterality_load_id: "", ssc_demand_id: "", impact_demand_id: "", antirotation_stability_id: "", movement_pattern_id: "", muscle_ids: [], equipment_ids: [], vector_mix: [], plane_mix: []
+        };
+    });
+
+    useEffect(() => {
+        const fetchOptions = async () => {
+            const [planes, supports, loads, ssc, impact, antirot, methods, types, diffs, patterns, equips, vectors] = await Promise.all([
+                supabase.from("plane").select("id, name"),
+                supabase.from("laterality_support").select("id, name"),
+                supabase.from("laterality_load").select("id, name"),
+                supabase.from("ssc_demand").select("id, name"),
+                supabase.from("impact_demand").select("id, name"),
+                supabase.from("antirotation_stability").select("id, name"),
+                supabase.from("training_method").select("id, name"),
+                supabase.from("exercise_type").select("id, name"),
+                supabase.from("difficulty_level").select("id, name"),
+                supabase.from("movement_pattern").select("id, name"),
+                supabase.from("equipment").select("id, name"),
+                supabase.from("dominant_vector").select("id, name")
+            ]);
+            setOptions({ planes: planes.data || [], supports: supports.data || [], loads: loads.data || [], ssc: ssc.data || [], impact: impact.data || [], antirot: antirot.data || [], methods: methods.data || [], types: types.data || [], difficulties: diffs.data || [], patterns: patterns.data || [], equipments: equips.data || [], vectors: vectors.data || [] });
+        };
+        fetchOptions();
+    }, []);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        const dataToSave = { ...formData, type_id: parseInt(formData.type_id) || null, difficulty_id: parseInt(formData.difficulty_id) || null, training_method_id: parseInt(formData.training_method_id) || null, laterality_support_id: parseInt(formData.laterality_support_id) || null, laterality_load_id: parseInt(formData.laterality_load_id) || null, ssc_demand_id: parseInt(formData.ssc_demand_id) || null, impact_demand_id: parseInt(formData.impact_demand_id) || null, antirotation_stability_id: parseInt(formData.antirotation_stability_id) || null, movement_pattern_id: parseInt(formData.movement_pattern_id) || null };
+        let error;
+        if (isEdit) { error = (await supabase.from("exercise").update(dataToSave).eq("id", editData.id)).error; }
+        else { error = (await supabase.from("exercise").insert(dataToSave).select()).error; }
+        if (!error) { onSuccess(); }
+        setLoading(false);
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-8 py-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">Nombre (ES)</Label>
+                    <Input value={formData.name_es} onChange={e => setFormData({ ...formData, name_es: e.target.value })} className="rounded-xl bg-white/5 font-bold" />
+                </div>
+                <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">Name (EN)</Label>
+                    <Input value={formData.name_en} onChange={e => setFormData({ ...formData, name_en: e.target.value })} className="rounded-xl bg-white/5 font-bold italic" />
+                </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+                <SelectField label="Patrón" value={formData.movement_pattern_id} options={options.patterns} onChange={v => setFormData({ ...formData, movement_pattern_id: v })} />
+                <SelectField label="Tipo Apoyo" value={formData.laterality_support_id} options={options.supports} onChange={v => setFormData({ ...formData, laterality_support_id: v })} />
+                <SelectField label="Tipo Carga" value={formData.laterality_load_id} options={options.loads} onChange={v => setFormData({ ...formData, laterality_load_id: v })} />
+                <SelectField label="SSC" value={formData.ssc_demand_id} options={options.ssc} onChange={v => setFormData({ ...formData, ssc_demand_id: v })} />
+                <SelectField label="Impacto" value={formData.impact_demand_id} options={options.impact} onChange={v => setFormData({ ...formData, impact_demand_id: v })} />
+                <SelectField label="Dificultad" value={formData.difficulty_id} options={options.difficulties} onChange={v => setFormData({ ...formData, difficulty_id: v })} />
+            </div>
+            <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-white/5">
+                <Input placeholder="URL Vídeo descriptivo" value={formData.urlvideo} onChange={e => setFormData({ ...formData, urlvideo: e.target.value })} className="rounded-xl bg-white/5 font-bold" />
+                <textarea placeholder="Descripción técnica del ejercicio..." value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full h-24 rounded-2xl bg-white/5 border border-slate-200 dark:border-white/10 p-4 font-bold text-sm outline-none focus:ring-1 focus:ring-indigo-600" />
+            </div>
+            <Button type="submit" disabled={loading} className="w-full py-6 rounded-2xl bg-indigo-600 text-lg font-black tracking-widest uppercase">
+                {loading ? "Sincronizando..." : (isEdit ? "Confirmar Cambios" : "Desplegar Ejercicio")}
+            </Button>
+        </form>
+    );
+}
+
+
+function SelectField({ label, value, options, onChange }: { label: string, value: string, options: { id: number | string, name: string }[], onChange: (v: string) => void }) {
     return (
         <div className="space-y-1.5">
             <Label className="text-[10px] uppercase text-slate-500 font-black ml-1">{label}</Label>

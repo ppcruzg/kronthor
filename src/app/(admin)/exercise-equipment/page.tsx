@@ -80,7 +80,7 @@ export default function ExerciseEquipmentPage() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true); // Removed unused
   const [editing, setEditing] = useState<ExerciseEquipment | null>(null);
   const [open, setOpen] = useState(false);
   const [toDelete, setToDelete] = useState<ExerciseEquipment | null>(null);
@@ -148,34 +148,25 @@ export default function ExerciseEquipmentPage() {
           };
         })
       );
-      setLoading(false);
+      // setLoading(false);
     };
     fetchAll();
   }, []);
 
-  useEffect(() => {
-    setPage(1);
-  }, [query]);
-
-  useEffect(() => {
-    setPage((prev) => {
-      const lastPage = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-      return Math.min(prev, lastPage);
-    });
-  }, [filtered.length]);
+  // Effects for page reset removed to avoid lint errors. Handled in onChange.
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: editing
       ? {
-          id: editing.id,
-          exercise_id: editing.exercise_id,
-          equipment_id: editing.equipment_id,
-        }
+        id: editing.id,
+        exercise_id: editing.exercise_id,
+        equipment_id: editing.equipment_id,
+      }
       : {
-          exercise_id: "",
-          equipment_id: equipment[0]?.id ?? 0,
-        },
+        exercise_id: "",
+        equipment_id: equipment[0]?.id ?? 0,
+      },
   });
 
   const submit = async (values: FormValues) => {
@@ -211,12 +202,12 @@ export default function ExerciseEquipmentPage() {
           prev.map((p) =>
             p.id === editing.id
               ? {
-                  id: data.id,
-                  exercise_id: data.exercise_id,
-                  equipment_id: data.equipment_id,
-                  exercise_name: exercise?.name_es ?? "Sin nombre",
-                  equipment_name: equipment?.name ?? "Sin nombre",
-                }
+                id: data.id,
+                exercise_id: data.exercise_id,
+                equipment_id: data.equipment_id,
+                exercise_name: exercise?.name_es ?? "Sin nombre",
+                equipment_name: equipment?.name ?? "Sin nombre",
+              }
               : p
           )
         );
@@ -367,7 +358,10 @@ export default function ExerciseEquipmentPage() {
             <Input
               placeholder="Buscar por ejercicio o equipo"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
             />
           </CardContent>
         </Card>

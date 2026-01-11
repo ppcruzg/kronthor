@@ -59,7 +59,7 @@ const PAGE_SIZE = 10;
 export default function EquipmentPage() {
   const [items, setItems] = useState<Equipment[]>([]);
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
+  // Removed unused loading
   const [editing, setEditing] = useState<Equipment | null>(null);
   const [open, setOpen] = useState(false);
   const [toDelete, setToDelete] = useState<Equipment | null>(null);
@@ -89,32 +89,22 @@ export default function EquipmentPage() {
         .order("id", { ascending: true });
 
       setItems(data || []);
-      setLoading(false);
+      // setLoading(false);
     };
     fetch();
   }, []);
 
-  useEffect(() => {
-    setPage(1);
-  }, [query]);
-
-  useEffect(() => {
-    setPage((prev) => {
-      const lastPage = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-      return Math.min(prev, lastPage);
-    });
-  }, [filtered.length]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: editing
       ? {
-          id: editing.id,
-          name: editing.name,
-        }
+        id: editing.id,
+        name: editing.name,
+      }
       : {
-          name: "",
-        },
+        name: "",
+      },
   });
 
   const submit = async (values: FormValues) => {
@@ -152,8 +142,12 @@ export default function EquipmentPage() {
       .delete()
       .eq("id", toDelete.id);
 
-    if (!error)
+    if (!error) {
       setItems((prev) => prev.filter((p) => p.id !== toDelete.id));
+      const newCount = filtered.length - 1;
+      const totalPages = Math.max(1, Math.ceil(newCount / PAGE_SIZE));
+      setPage(p => Math.min(p, totalPages));
+    }
 
     setToDelete(null);
   };
@@ -220,7 +214,10 @@ export default function EquipmentPage() {
             <Input
               placeholder="Buscar por nombre"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
             />
           </CardContent>
         </Card>
@@ -315,7 +312,7 @@ export default function EquipmentPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Eliminar</AlertDialogTitle>
               <AlertDialogDescription>
-                ¿Estás seguro de que deseas eliminar "{toDelete?.name}"?
+                ¿Estás seguro de que deseas eliminar &quot;{toDelete?.name}&quot;?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

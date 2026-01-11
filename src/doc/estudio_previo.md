@@ -5,6 +5,7 @@ Taxonomía del ejercicio, perfil de demanda por deporte y reglas de transferenci
 Versión: 1.0    |    Uso: PRD (sección de metodología / motor de planificación)
 
 
+
 1. Propósito y alcance
 Definir una estructura metodológica y operativa para que KRONTHOR genere planes de entrenamiento de 12 semanas para cualquier deporte, basándose en: (a) la naturaleza del deporte (acciones, planos/vectores, dominancias, SSC e impacto, dominio energético); (b) una ontología objetiva de ejercicios (tags por capas); y (c) reglas de transferencia (especificidad) para seleccionar y ordenar ejercicios y sesiones de forma congruente.
 2. Principio rector: especificidad y transferencia

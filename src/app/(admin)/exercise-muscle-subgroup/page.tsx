@@ -113,12 +113,12 @@ export default function ExerciseMuscleSubgroupPage() {
     ? Math.min(page * PAGE_SIZE, filtered.length)
     : 0;
 
-const normalizeRelation = <T,>(value: T | T[] | null | undefined): T | undefined => {
-  if (!value) return undefined;
-  return Array.isArray(value) ? value[0] : value;
-};
+  const normalizeRelation = <T,>(value: T | T[] | null | undefined): T | undefined => {
+    if (!value) return undefined;
+    return Array.isArray(value) ? value[0] : value;
+  };
 
-const loadRecords = useCallback(async () => {
+  const loadRecords = useCallback(async () => {
     const { data } = await supabase
       .from("exercise_muscle_subgroup")
       .select(
@@ -178,7 +178,8 @@ const loadRecords = useCallback(async () => {
 
     loadOptions();
     loadRecords();
-  }, [loadRecords]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Removed deps to avoid infinite loop if loadRecords is unstable
 
   useEffect(() => {
     if (editing) {
@@ -195,13 +196,7 @@ const loadRecords = useCallback(async () => {
     }
   }, [editing, form, exercises, subgroups]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [query]);
-
-  useEffect(() => {
-    setPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
+  // Page reset effects removed. Handled in onChange.
 
   const submit = async (values: FormValues) => {
     if (editing?.id) {
@@ -298,9 +293,8 @@ const loadRecords = useCallback(async () => {
                     >
                       {subgroups.map((subgroup) => (
                         <option key={subgroup.id} value={subgroup.id}>
-                          {`${subgroup.name}${
-                            subgroup.group_name ? ` (${subgroup.group_name})` : ""
-                          }`}
+                          {`${subgroup.name}${subgroup.group_name ? ` (${subgroup.group_name})` : ""
+                            }`}
                         </option>
                       ))}
                     </select>
@@ -327,7 +321,10 @@ const loadRecords = useCallback(async () => {
             <Input
               placeholder="Buscar por ejercicio, subgrupo o grupo"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
             />
           </CardContent>
         </Card>

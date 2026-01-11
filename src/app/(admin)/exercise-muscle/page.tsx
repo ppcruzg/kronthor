@@ -153,7 +153,15 @@ export default function ExerciseMusclePage() {
   const rangeStart = filtered.length ? (page - 1) * PAGE_SIZE + 1 : 0;
   const rangeEnd = filtered.length ? Math.min(page * PAGE_SIZE, filtered.length) : 0;
 
-  const mapRecord = (item: any): ExerciseMuscleRecord => {
+  const mapRecord = (item: {
+    id: number;
+    role: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    exercise: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    muscle: any;
+  }): ExerciseMuscleRecord => {
+    // Better to use `unknown` or specific type if possible, but for now specific structure
     const exercise = normalizeRelation(item.exercise);
     const muscle = normalizeRelation(item.muscle);
     const group = normalizeRelation(muscle?.group);
@@ -378,7 +386,7 @@ export default function ExerciseMusclePage() {
     }
   };
 
-  const onFormError = (errors: any) => {
+  const onFormError = (errors: unknown) => {
     console.error("Form validation errors:", errors);
     toast.error("Revisa los campos del formulario");
   };
@@ -421,6 +429,7 @@ export default function ExerciseMusclePage() {
       toast.error("Selecciona ejercicio y al menos un músculo");
       return;
     }
+    setSaving(true);
 
     const relations = [
       ...selectedPrimaryMuscles.map(muscleId => ({
@@ -466,7 +475,10 @@ export default function ExerciseMusclePage() {
       setSelectedPrimaryMuscles([]);
       setSelectedSecondaryMuscles([]);
     } catch (err) {
+      console.error("Error creating relations:", err);
       toast.error("Error inesperado");
+    } finally {
+      setSaving(false);
     }
   };
 

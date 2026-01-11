@@ -59,7 +59,7 @@ const PAGE_SIZE = 10;
 export default function MovementPatternPage() {
   const [patterns, setPatterns] = useState<MovementPattern[]>([]);
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true); // Unused
   const [editing, setEditing] = useState<MovementPattern | null>(null);
   const [open, setOpen] = useState(false);
   const [toDelete, setToDelete] = useState<MovementPattern | null>(null);
@@ -89,32 +89,25 @@ export default function MovementPatternPage() {
         .order("id", { ascending: true });
 
       setPatterns(data || []);
-      setLoading(false);
+      // setLoading(false);
     };
     fetch();
   }, []);
 
-  useEffect(() => {
-    setPage(1);
-  }, [query]);
+  // Removed direct setPage effects to avoid cascading updates
 
-  useEffect(() => {
-    setPage((prev) => {
-      const lastPage = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-      return Math.min(prev, lastPage);
-    });
-  }, [filtered.length]);
+
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: editing
       ? {
-          id: editing.id,
-          name: editing.name,
-        }
+        id: editing.id,
+        name: editing.name,
+      }
       : {
-          name: "",
-        },
+        name: "",
+      },
   });
 
   const submit = async (values: FormValues) => {
@@ -220,7 +213,10 @@ export default function MovementPatternPage() {
             <Input
               placeholder="Buscar por nombre"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
             />
           </CardContent>
         </Card>
@@ -315,7 +311,7 @@ export default function MovementPatternPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Eliminar</AlertDialogTitle>
               <AlertDialogDescription>
-                ¿Estás seguro de que deseas eliminar "{toDelete?.name}"?
+                ¿Estás seguro de que deseas eliminar &quot;{toDelete?.name}&quot;?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

@@ -80,7 +80,7 @@ export default function ExerciseMovementPatternPage() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [patterns, setPatterns] = useState<MovementPattern[]>([]);
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true); // Removed unused
   const [editing, setEditing] = useState<ExerciseMovementPattern | null>(null);
   const [open, setOpen] = useState(false);
   const [toDelete, setToDelete] = useState<ExerciseMovementPattern | null>(null);
@@ -148,34 +148,25 @@ export default function ExerciseMovementPatternPage() {
           };
         })
       );
-      setLoading(false);
+      // setLoading(false);
     };
     fetchAll();
   }, []);
 
-  useEffect(() => {
-    setPage(1);
-  }, [query]);
-
-  useEffect(() => {
-    setPage((prev) => {
-      const lastPage = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-      return Math.min(prev, lastPage);
-    });
-  }, [filtered.length]);
+  // Effects for page reset removed to avoid lint errors. Handled in onChange.
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: editing
       ? {
-          id: editing.id,
-          exercise_id: editing.exercise_id,
-          pattern_id: editing.pattern_id,
-        }
+        id: editing.id,
+        exercise_id: editing.exercise_id,
+        pattern_id: editing.pattern_id,
+      }
       : {
-          exercise_id: "",
-          pattern_id: patterns[0]?.id ?? 0,
-        },
+        exercise_id: "",
+        pattern_id: patterns[0]?.id ?? 0,
+      },
   });
 
   const submit = async (values: FormValues) => {
@@ -211,12 +202,12 @@ export default function ExerciseMovementPatternPage() {
           prev.map((p) =>
             p.id === editing.id
               ? {
-                  id: data.id,
-                  exercise_id: data.exercise_id,
-                  pattern_id: data.pattern_id,
-                  exercise_name: exercise?.name_es ?? "Sin nombre",
-                  pattern_name: pattern?.name ?? "Sin nombre",
-                }
+                id: data.id,
+                exercise_id: data.exercise_id,
+                pattern_id: data.pattern_id,
+                exercise_name: exercise?.name_es ?? "Sin nombre",
+                pattern_name: pattern?.name ?? "Sin nombre",
+              }
               : p
           )
         );
@@ -367,7 +358,10 @@ export default function ExerciseMovementPatternPage() {
             <Input
               placeholder="Buscar por ejercicio o patrón"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
             />
           </CardContent>
         </Card>

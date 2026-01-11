@@ -30,7 +30,6 @@ import {
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -60,7 +59,7 @@ export default function PhysicalSubCapabilityPage() {
   const [items, setItems] = useState<SubCapability[]>([]);
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
+  // Removed unused loading
   const [editing, setEditing] = useState<SubCapability | null>(null);
   const [open, setOpen] = useState(false);
   const [toDelete, setToDelete] = useState<SubCapability | null>(null);
@@ -81,7 +80,7 @@ export default function PhysicalSubCapabilityPage() {
         setItems(data);
         setCapabilities(caps || []);
       }
-      setLoading(false);
+      // setLoading(false);
     };
     fetch();
   }, []);
@@ -237,7 +236,7 @@ export default function PhysicalSubCapabilityPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Eliminar</AlertDialogTitle>
               <AlertDialogDescription>
-                ¿Estás seguro de que deseas eliminar "{toDelete?.name}"?
+                ¿Estás seguro de que deseas eliminar &quot;{toDelete?.name}&quot;?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

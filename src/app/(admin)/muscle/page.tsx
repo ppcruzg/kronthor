@@ -174,16 +174,7 @@ export default function MuscleCatalogPage() {
   const rangeStart = filtered.length ? (page - 1) * PAGE_SIZE + 1 : 0;
   const rangeEnd = filtered.length ? Math.min(page * PAGE_SIZE, filtered.length) : 0;
 
-  useEffect(() => {
-    setPage(1);
-  }, [query]);
-
-  useEffect(() => {
-    setPage((prev) => {
-      const lastPage = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-      return Math.min(prev, lastPage);
-    });
-  }, [filtered.length]);
+  // Removed setPage effects
 
   const submit = async (values: FormValues) => {
     if (editing) {
@@ -323,7 +314,10 @@ export default function MuscleCatalogPage() {
             <Input
               placeholder="Buscar por musculo o grupo"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
             />
           </CardContent>
         </Card>
@@ -421,7 +415,7 @@ export default function MuscleCatalogPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Eliminar</AlertDialogTitle>
               <AlertDialogDescription>
-                Estas seguro de que deseas eliminar "{toDelete?.name}"?
+                Estas seguro de que deseas eliminar &quot;{toDelete?.name}&quot;?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,7 +40,6 @@ import {
     ChevronRight,
     Copy,
     Info,
-    ExternalLink,
     Hash,
     Layers
 } from "lucide-react";
@@ -60,6 +58,49 @@ const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+interface FormOption {
+    id: number;
+    name: string;
+}
+
+interface SportFormOptions {
+    planes: FormOption[];
+    supports: FormOption[];
+    loads: FormOption[];
+    ssc: FormOption[];
+    impact: FormOption[];
+    antirot: FormOption[];
+    cod: FormOption[];
+    volumes: FormOption[];
+    profiles: FormOption[];
+    actions: FormOption[];
+    priorities: FormOption[];
+    risks: FormOption[];
+    limiters: FormOption[];
+    vectors: FormOption[];
+}
+
+interface SportFormData {
+    sport_id?: string;
+    is_active?: boolean;
+    name: string;
+    position_role: string;
+    laterality_support_id: string;
+    laterality_load_id: string;
+    antirotation_stability_id: string;
+    cod_demand_id: string;
+    ssc_demand_id: string;
+    impact_demand_id: string;
+    practice_volume_id: string;
+    energy_profile_id: string;
+    action_ids: string[];
+    priority_ids: { id: string, rank: number }[];
+    risk_ids: string[];
+    limiter_ids: string[];
+    vector_mix: { id: string; weight: number }[];
+    plane_mix: { id: string; weight: number }[];
+}
 
 interface Sport {
     id: string;
@@ -135,7 +176,10 @@ export default function SportsDashboardMasterDetail() {
         setLoading(false);
     };
 
-    useEffect(() => { fetchSports(); }, []);
+    useEffect(() => {
+        fetchSports();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase();
@@ -272,7 +316,7 @@ export default function SportsDashboardMasterDetail() {
                                             <AlertDialogHeader>
                                                 <AlertDialogTitle className="text-xl font-black uppercase">¿Eliminar perfil deportivo?</AlertDialogTitle>
                                                 <AlertDialogDescription className="text-slate-600 dark:text-slate-400 font-bold">
-                                                    Esta acción borrará "{selectedSport.name}" y toda su configuración analítica.
+                                                    Esta acción borrará &quot;{selectedSport.name}&quot; y toda su configuración analítica.
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
@@ -446,80 +490,106 @@ interface CreateSportDialogProps {
 
 function CreateSportDialog({ editData, duplicateData, onSuccess, trigger }: CreateSportDialogProps) {
     const isEdit = !!editData;
-    const isDuplicate = !!duplicateData;
     const [open, setOpen] = useState(false);
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                {trigger ? trigger : (isEdit ? (
+                    <Button variant="outline" className="rounded-xl font-bold border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5">
+                        <Edit className="h-4 w-4 mr-2" /> EDITAR
+                    </Button>
+                ) : (
+                    <Button className="bg-indigo-600 hover:bg-indigo-700 shadow-[0_0_20px_rgba(79,70,229,0.3)] rounded-xl font-bold">
+                        <Plus className="mr-2 h-4 w-4" /> REGISTRAR PERFIL
+                    </Button>
+                ))}
+            </DialogTrigger>
+            <DialogContent className="glass-dialog max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl">
+                <DialogHeader>
+                    <DialogTitle className="text-3xl font-black italic uppercase tracking-tighter">
+                        {isEdit ? "Optimizar Ficha Técnica" : (!!duplicateData ? "Duplicar Perfil" : "Nuevo Perfil Competitivo")}
+                    </DialogTitle>
+                    <DialogDescription className="text-slate-500 font-bold">
+                        Define el ADN competitivo y las demandas físicas del deporte.
+                    </DialogDescription>
+                </DialogHeader>
+                {open && (
+                    <SportForm
+                        editData={editData}
+                        duplicateData={duplicateData}
+                        onSuccess={() => {
+                            onSuccess();
+                            setOpen(false);
+                        }}
+                    />
+                )}
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function SportForm({ editData, duplicateData, onSuccess }: { editData?: Sport, duplicateData?: Sport, onSuccess: () => void }) {
+    const isEdit = !!editData;
+    // Removed unused isDuplicate
     const [loading, setLoading] = useState(false);
-
-    const [options, setOptions] = useState<any>({
-        supports: [], loads: [], antirot: [], cod: [], ssc: [], impact: [], volumes: [], profiles: []
+    const [options, setOptions] = useState<SportFormOptions>({
+        planes: [], supports: [], loads: [], ssc: [], impact: [], antirot: [], cod: [], volumes: [], profiles: [],
+        actions: [], priorities: [], risks: [], limiters: [], vectors: []
     });
 
-    const [formData, setFormData] = useState<any>({
-        sport_id: "", name: "", position_role: "", is_active: true,
-        laterality_support_id: "", laterality_load_id: "", antirotation_stability_id: "",
-        cod_demand_id: "", ssc_demand_id: "", impact_demand_id: "",
-        practice_volume_id: "", energy_profile_id: ""
-    });
-
-    useEffect(() => {
-        if (open) {
-            const fetchOptions = async () => {
-                const [supports, loads, antirot, cod, ssc, impact, volumes, profiles] = await Promise.all([
-                    supabase.from("laterality_support").select("id, name"),
-                    supabase.from("laterality_load").select("id, name"),
-                    supabase.from("antirotation_stability").select("id, name"),
-                    supabase.from("cod_demand").select("id, name"),
-                    supabase.from("ssc_demand").select("id, name"),
-                    supabase.from("impact_demand").select("id, name"),
-                    supabase.from("practice_volume").select("id, name"),
-                    supabase.from("energy_profile").select("id, name")
-                ]);
-                setOptions({
-                    supports: supports.data || [], loads: loads.data || [], antirot: antirot.data || [],
-                    cod: cod.data || [], ssc: ssc.data || [], impact: impact.data || [],
-                    volumes: volumes.data || [], profiles: profiles.data || []
-                });
+    const [formData, setFormData] = useState<SportFormData>(() => {
+        const base = editData || duplicateData;
+        if (base) {
+            return {
+                sport_id: isEdit ? base.sport_id : `${base.sport_id}_CLONE`,
+                name: isEdit ? base.name : `${base.name} (COPIA)`,
+                position_role: base.position_role || "",
+                is_active: isEdit ? base.is_active : true,
+                laterality_support_id: base.laterality_support_id?.toString() || "",
+                laterality_load_id: base.laterality_load_id?.toString() || "",
+                antirotation_stability_id: base.antirotation_stability_id?.toString() || "",
+                cod_demand_id: base.cod_demand_id?.toString() || "",
+                ssc_demand_id: base.ssc_demand_id?.toString() || "",
+                impact_demand_id: base.impact_demand_id?.toString() || "",
+                practice_volume_id: base.practice_volume_id?.toString() || "",
+                energy_profile_id: base.energy_profile_id?.toString() || "",
+                // Initialize arrays as empty for now since UI doesn't handle them yet
+                action_ids: [], priority_ids: [], risk_ids: [], limiter_ids: [],
+                vector_mix: [], plane_mix: []
             };
-            fetchOptions();
         }
-    }, [open]);
+        return {
+            sport_id: "", name: "", position_role: "", is_active: true,
+            laterality_support_id: "", laterality_load_id: "", antirotation_stability_id: "",
+            cod_demand_id: "", ssc_demand_id: "", impact_demand_id: "",
+            practice_volume_id: "", energy_profile_id: "",
+            action_ids: [], priority_ids: [], risk_ids: [], limiter_ids: [],
+            vector_mix: [], plane_mix: []
+        };
+    });
 
     useEffect(() => {
-        if (open) {
-            if (editData) {
-                setFormData({
-                    sport_id: editData.sport_id, name: editData.name, position_role: editData.position_role || "", is_active: editData.is_active,
-                    laterality_support_id: editData.laterality_support_id?.toString() || "",
-                    laterality_load_id: editData.laterality_load_id?.toString() || "",
-                    antirotation_stability_id: editData.antirotation_stability_id?.toString() || "",
-                    cod_demand_id: editData.cod_demand_id?.toString() || "",
-                    ssc_demand_id: editData.ssc_demand_id?.toString() || "",
-                    impact_demand_id: editData.impact_demand_id?.toString() || "",
-                    practice_volume_id: editData.practice_volume_id?.toString() || "",
-                    energy_profile_id: editData.energy_profile_id?.toString() || ""
-                });
-            } else if (duplicateData) {
-                setFormData({
-                    sport_id: `${duplicateData.sport_id}_CLONE`, name: `${duplicateData.name} (COPIA)`, position_role: duplicateData.position_role || "", is_active: true,
-                    laterality_support_id: duplicateData.laterality_support_id?.toString() || "",
-                    laterality_load_id: duplicateData.laterality_load_id?.toString() || "",
-                    antirotation_stability_id: duplicateData.antirotation_stability_id?.toString() || "",
-                    cod_demand_id: duplicateData.cod_demand_id?.toString() || "",
-                    ssc_demand_id: duplicateData.ssc_demand_id?.toString() || "",
-                    impact_demand_id: duplicateData.impact_demand_id?.toString() || "",
-                    practice_volume_id: duplicateData.practice_volume_id?.toString() || "",
-                    energy_profile_id: duplicateData.energy_profile_id?.toString() || ""
-                });
-            } else {
-                setFormData({
-                    sport_id: "", name: "", position_role: "", is_active: true,
-                    laterality_support_id: "", laterality_load_id: "", antirotation_stability_id: "",
-                    cod_demand_id: "", ssc_demand_id: "", impact_demand_id: "",
-                    practice_volume_id: "", energy_profile_id: ""
-                });
-            }
-        }
-    }, [editData, duplicateData, open]);
+        const fetchOptions = async () => {
+            const [supports, loads, antirot, cod, ssc, impact, volumes, profiles] = await Promise.all([
+                supabase.from("laterality_support").select("id, name"),
+                supabase.from("laterality_load").select("id, name"),
+                supabase.from("antirotation_stability").select("id, name"),
+                supabase.from("cod_demand").select("id, name"),
+                supabase.from("ssc_demand").select("id, name"),
+                supabase.from("impact_demand").select("id, name"),
+                supabase.from("practice_volume").select("id, name"),
+                supabase.from("energy_profile").select("id, name")
+            ]);
+            setOptions(prev => ({
+                ...prev,
+                supports: supports.data || [], loads: loads.data || [], antirot: antirot.data || [],
+                cod: cod.data || [], ssc: ssc.data || [], impact: impact.data || [],
+                volumes: volumes.data || [], profiles: profiles.data || []
+            }));
+        };
+        fetchOptions();
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -545,88 +615,65 @@ function CreateSportDialog({ editData, duplicateData, onSuccess, trigger }: Crea
 
         if (!error) {
             onSuccess();
-            setOpen(false);
         }
         setLoading(false);
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                {trigger ? trigger : (isEdit ? (
-                    <Button variant="outline" className="rounded-xl font-bold border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5">
-                        <Edit className="h-4 w-4 mr-2" /> EDITAR
+        <form onSubmit={handleSubmit} className="space-y-8 py-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">ID Deporte (Código)</Label>
+                    <Input value={formData.sport_id} onChange={e => setFormData({ ...formData, sport_id: e.target.value })} className="rounded-xl bg-white/5 font-bold uppercase" placeholder="EJ: FOT-DEL" />
+                </div>
+                <div className="space-y-1.5 col-span-1 md:col-span-2">
+                    <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">Nombre del Deporte</Label>
+                    <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="rounded-xl bg-white/5 font-bold" placeholder="EJ: Fútbol" />
+                </div>
+                <div className="space-y-1.5 col-span-2">
+                    <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">Posición / Rol Específico</Label>
+                    <Input value={formData.position_role} onChange={e => setFormData({ ...formData, position_role: e.target.value })} className="rounded-xl bg-white/5 font-bold" placeholder="EJ: Delantero Centro" />
+                </div>
+                <div className="space-y-1.5 flex items-end">
+                    <Button type="button" variant="outline" className={cn("w-full rounded-xl font-bold h-10 uppercase text-[10px]", formData.is_active ? "border-emerald-500/30 text-emerald-500" : "border-rose-500/30 text-rose-500")} onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}>
+                        {formData.is_active ? "Perfil Activo" : "Perfil Inactivo"}
                     </Button>
-                ) : (
-                    <Button className="bg-indigo-600 hover:bg-indigo-700 shadow-[0_0_20px_rgba(79,70,229,0.3)] rounded-xl font-bold">
-                        <Plus className="mr-2 h-4 w-4" /> REGISTRAR PERFIL
-                    </Button>
-                ))}
-            </DialogTrigger>
-            <DialogContent className="glass-dialog max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl">
-                <DialogHeader>
-                    <DialogTitle className="text-3xl font-black italic uppercase tracking-tighter">
-                        {isEdit ? "Optimizar Ficha Técnica" : (isDuplicate ? "Duplicar Perfil" : "Nuevo Perfil Competitivo")}
-                    </DialogTitle>
-                    <DialogDescription className="text-slate-500 font-bold">
-                        Define el ADN competitivo y las demandas físicas del deporte.
-                    </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-8 py-4">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        <div className="space-y-1.5">
-                            <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">ID Deporte (Código)</Label>
-                            <Input value={formData.sport_id} onChange={e => setFormData({ ...formData, sport_id: e.target.value })} className="rounded-xl bg-white/5 font-bold uppercase" placeholder="EJ: FOT-DEL" />
-                        </div>
-                        <div className="space-y-1.5 col-span-1 md:col-span-2">
-                            <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">Nombre del Deporte</Label>
-                            <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="rounded-xl bg-white/5 font-bold" placeholder="EJ: Fútbol" />
-                        </div>
-                        <div className="space-y-1.5 col-span-2">
-                            <Label className="text-[10px] font-black uppercase text-slate-500 ml-1">Posición / Rol Específico</Label>
-                            <Input value={formData.position_role} onChange={e => setFormData({ ...formData, position_role: e.target.value })} className="rounded-xl bg-white/5 font-bold" placeholder="EJ: Delantero Centro" />
-                        </div>
-                        <div className="space-y-1.5 flex items-end">
-                            <Button type="button" variant="outline" className={cn("w-full rounded-xl font-bold h-10 uppercase text-[10px]", formData.is_active ? "border-emerald-500/30 text-emerald-500" : "border-rose-500/30 text-rose-500")} onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}>
-                                {formData.is_active ? "Perfil Activo" : "Perfil Inactivo"}
-                            </Button>
-                        </div>
-                    </div>
+                </div>
+            </div>
 
-                    <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-white/5">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Coordenadas Biomecánicas</h4>
-                        <div className="grid grid-cols-3 gap-4">
-                            <SelectField label="Apoyo" value={formData.laterality_support_id} options={options.supports} onChange={v => setFormData({ ...formData, laterality_support_id: v })} />
-                            <SelectField label="Carga" value={formData.laterality_load_id} options={options.loads} onChange={v => setFormData({ ...formData, laterality_load_id: v })} />
-                            <SelectField label="Anti-Rotación" value={formData.antirotation_stability_id} options={options.antirot} onChange={v => setFormData({ ...formData, antirotation_stability_id: v })} />
-                        </div>
-                    </div>
+            <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-white/5">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Coordenadas Biomecánicas</h4>
+                <div className="grid grid-cols-3 gap-4">
+                    <SelectField label="Apoyo" value={formData.laterality_support_id} options={options.supports} onChange={v => setFormData({ ...formData, laterality_support_id: v })} />
+                    <SelectField label="Carga" value={formData.laterality_load_id} options={options.loads} onChange={v => setFormData({ ...formData, laterality_load_id: v })} />
+                    <SelectField label="Anti-Rotación" value={formData.antirotation_stability_id} options={options.antirot} onChange={v => setFormData({ ...formData, antirotation_stability_id: v })} />
+                </div>
+            </div>
 
-                    <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-white/5">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-500">Perfil de Demandas</h4>
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                            <SelectField label="COD Demand" value={formData.cod_demand_id} options={options.cod} onChange={v => setFormData({ ...formData, cod_demand_id: v })} />
-                            <SelectField label="SSC Demand" value={formData.ssc_demand_id} options={options.ssc} onChange={v => setFormData({ ...formData, ssc_demand_id: v })} />
-                            <SelectField label="Impact Demand" value={formData.impact_demand_id} options={options.impact} onChange={v => setFormData({ ...formData, impact_demand_id: v })} />
-                            <SelectField label="Práctica Vol" value={formData.practice_volume_id} options={options.volumes} onChange={v => setFormData({ ...formData, practice_volume_id: v })} />
-                            <SelectField label="Energy Profile" value={formData.energy_profile_id} options={options.profiles} onChange={v => setFormData({ ...formData, energy_profile_id: v })} />
-                        </div>
-                    </div>
+            <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-white/5">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-500">Perfil de Demandas</h4>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <SelectField label="COD Demand" value={formData.cod_demand_id} options={options.cod} onChange={v => setFormData({ ...formData, cod_demand_id: v })} />
+                    <SelectField label="SSC Demand" value={formData.ssc_demand_id} options={options.ssc} onChange={v => setFormData({ ...formData, ssc_demand_id: v })} />
+                    <SelectField label="Impact Demand" value={formData.impact_demand_id} options={options.impact} onChange={v => setFormData({ ...formData, impact_demand_id: v })} />
+                    <SelectField label="Práctica Vol" value={formData.practice_volume_id} options={options.volumes} onChange={v => setFormData({ ...formData, practice_volume_id: v })} />
+                    <SelectField label="Energy Profile" value={formData.energy_profile_id} options={options.profiles} onChange={v => setFormData({ ...formData, energy_profile_id: v })} />
+                </div>
+            </div>
 
-                    <div className="p-4 bg-indigo-500/5 rounded-2xl border border-indigo-500/10">
-                        <p className="text-[10px] font-bold text-slate-500 uppercase text-center mb-2 italic">Próximamente: Gestión de Acciones Clave, Prioridades y Mezclas Visuales</p>
-                    </div>
+            <div className="p-4 bg-indigo-500/5 rounded-2xl border border-indigo-500/10">
+                <p className="text-[10px] font-bold text-slate-500 uppercase text-center mb-2 italic">Próximamente: Gestión de Acciones Clave, Prioridades y Mezclas Visuales</p>
+            </div>
 
-                    <Button type="submit" disabled={loading} className="w-full py-6 rounded-2xl bg-indigo-600 text-lg font-black tracking-widest uppercase shadow-lg shadow-indigo-600/20">
-                        {loading ? "Sincronizando..." : (isEdit ? "Actualizar Perfil" : "Desplegar Perfil")}
-                    </Button>
-                </form>
-            </DialogContent>
-        </Dialog>
+            <Button type="submit" disabled={loading} className="w-full py-6 rounded-2xl bg-indigo-600 text-lg font-black tracking-widest uppercase shadow-lg shadow-indigo-600/20">
+                {loading ? "Sincronizando..." : (isEdit ? "Actualizar Perfil" : "Desplegar Perfil")}
+            </Button>
+        </form>
     );
 }
 
-function SelectField({ label, value, options, onChange }: { label: string, value: string, options: any[], onChange: (v: string) => void }) {
+
+function SelectField({ label, value, options, onChange }: { label: string, value: string, options: FormOption[], onChange: (v: string) => void }) {
     return (
         <div className="space-y-1.5">
             <Label className="text-[10px] uppercase text-slate-500 font-black ml-1">{label}</Label>
@@ -635,7 +682,7 @@ function SelectField({ label, value, options, onChange }: { label: string, value
                     <SelectValue placeholder="..." />
                 </SelectTrigger>
                 <SelectContent className="glass-dialog rounded-xl">
-                    {options.map((opt: any) => (
+                    {options.map((opt) => (
                         <SelectItem key={opt.id} value={opt.id.toString()} className="font-bold">{opt.name}</SelectItem>
                     ))}
                 </SelectContent>

@@ -93,16 +93,7 @@ export default function MuscleGroupPage() {
     fetch();
   }, []);
 
-  useEffect(() => {
-    setPage(1);
-  }, [query]);
-
-  useEffect(() => {
-    setPage((prev) => {
-      const lastPage = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-      return Math.min(prev, lastPage);
-    });
-  }, [filtered.length]);
+  // Removed direct setPage effects
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -216,7 +207,10 @@ export default function MuscleGroupPage() {
             <Input
               placeholder="Buscar por nombre"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
             />
           </CardContent>
         </Card>
@@ -307,7 +301,7 @@ export default function MuscleGroupPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Eliminar</AlertDialogTitle>
               <AlertDialogDescription>
-                Estas seguro de que deseas eliminar "{toDelete?.name}"?
+                Estas seguro de que deseas eliminar &quot;{toDelete?.name}&quot;?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

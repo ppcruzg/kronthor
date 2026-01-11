@@ -1,20 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
 import {
     Dialog,
     DialogContent,
@@ -32,7 +24,6 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Search, Plus, Pencil, Trash, Tag, Database } from "lucide-react";
 import { Label } from "@/components/ui/label";
@@ -66,8 +57,9 @@ export function GenericCatalogPage({ tableName, title, description, icon }: Gene
     const [open, setOpen] = useState(false);
     const [toDelete, setToDelete] = useState<CatalogItem | null>(null);
     const [page, setPage] = useState(1);
+    // const [refreshKey, setRefreshKey] = useState(0); // Removed unused
 
-    const fetchItems = async () => {
+    const fetchItems = useCallback(async () => {
         setLoading(true);
         const { data, error } = await supabase
             .from(tableName)
@@ -76,11 +68,12 @@ export function GenericCatalogPage({ tableName, title, description, icon }: Gene
 
         if (!error) setItems(data || []);
         setLoading(false);
-    };
+    }, [tableName]);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
         fetchItems();
-    }, [tableName]);
+    }, [fetchItems]);
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -97,38 +90,6 @@ export function GenericCatalogPage({ tableName, title, description, icon }: Gene
     }, [filtered, page]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-
-    const [formData, setFormData] = useState({ name: "", code: "", description: "" });
-
-    useEffect(() => {
-        if (editing) {
-            setFormData({
-                name: editing.name,
-                code: editing.code || "",
-                description: editing.description || "",
-            });
-        } else {
-            setFormData({ name: "", code: "", description: "" });
-        }
-    }, [editing, open]);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const payload = {
-            name: formData.name,
-            ...(formData.code ? { code: formData.code } : {}),
-            ...(formData.description ? { description: formData.description } : {})
-        };
-
-        if (editing) {
-            const { error } = await supabase.from(tableName).update(payload).eq("id", editing.id);
-            if (!error) fetchItems();
-        } else {
-            const { error } = await supabase.from(tableName).insert(payload);
-            if (!error) fetchItems();
-        }
-        setOpen(false);
-    };
 
     const onDelete = async () => {
         if (!toDelete) return;
@@ -168,36 +129,16 @@ export function GenericCatalogPage({ tableName, title, description, icon }: Gene
                                     Define las propiedades del catálogo para {title}.
                                 </DialogDescription>
                             </DialogHeader>
-                            <form onSubmit={handleSubmit} className="space-y-6 pt-4">
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] uppercase font-bold text-slate-500">Nombre</Label>
-                                    <Input
-                                        value={formData.name}
-                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                        className="bg-white/5 border-white/10"
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] uppercase font-bold text-slate-500">Código (Opcional)</Label>
-                                    <Input
-                                        value={formData.code}
-                                        onChange={e => setFormData({ ...formData, code: e.target.value })}
-                                        className="bg-white/5 border-white/10 italic"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] uppercase font-bold text-slate-500">Descripción (Opcional)</Label>
-                                    <textarea
-                                        value={formData.description}
-                                        onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                        className="w-full h-24 rounded-lg bg-white/5 border border-white/10 p-3 text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
-                                    />
-                                </div>
-                                <Button type="submit" className="w-full py-6 font-black tracking-widest bg-indigo-600 hover:neon-border transition-all transition-all duration-300">
-                                    {editing ? "ACTUALIZAR CORE" : "DESPLEGAR REGISTRO"}
-                                </Button>
-                            </form>
+                            {open && (
+                                <CatalogForm
+                                    tableName={tableName}
+                                    editing={editing}
+                                    onSuccess={() => {
+                                        fetchItems();
+                                        setOpen(false);
+                                    }}
+                                />
+                            )}
                         </DialogContent>
                     </Dialog>
                 </div>
@@ -235,7 +176,7 @@ export function GenericCatalogPage({ tableName, title, description, icon }: Gene
                                         </div>
                                         <p className="text-sm text-slate-400 line-clamp-2">{x.description || "Sin descripción."}</p>
                                     </div>
-                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex gap-1 opacity-0 group-hover:opacity-101 transition-opacity">
                                         <Button size="icon" variant="ghost" className="h-8 w-8 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10" onClick={() => { setEditing(x); setOpen(true); }}>
                                             <Pencil className="h-4 w-4" />
                                         </Button>
@@ -262,21 +203,89 @@ export function GenericCatalogPage({ tableName, title, description, icon }: Gene
                 )}
 
                 {/* Delete Dialog */}
-                <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+                <AlertDialog open={!!toDelete} onOpenChange={(o) => { if (!o) setToDelete(null); }}>
                     <AlertDialogContent className="glass-dialog">
                         <AlertDialogHeader>
                             <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
                             <AlertDialogDescription className="text-slate-400">
-                                Esta acción eliminará "{toDelete?.name}" del catálogo y podría afectar a los registros que lo utilizan.
+                                Esta acción eliminará &quot;{toDelete?.name}&quot; del catálogo y podría afectar a los registros que lo utilizan.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                            <AlertDialogCancel className="bg-white/5 border-white/10 text-white">Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={onDelete} className="bg-rose-600 hover:bg-rose-700">Eliminar</AlertDialogAction>
+                            <AlertDialogCancel className="bg-white/5 border-white/10 text-white" onClick={() => setToDelete(null)}>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={onDelete} className="bg-rose-600 hover:bg-rose-700 font-bold">ELIMINAR</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
             </div>
         </div>
+    );
+}
+
+interface CatalogFormProps {
+    tableName: string;
+    editing: CatalogItem | null;
+    onSuccess: () => void;
+}
+
+function CatalogForm({ tableName, editing, onSuccess }: CatalogFormProps) {
+    const [loading, setLoading] = useState(false);
+    const [formData, setFormData] = useState({
+        name: editing?.name || "",
+        code: editing?.code || "",
+        description: editing?.description || "",
+    });
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        const payload = {
+            name: formData.name,
+            ...(formData.code ? { code: formData.code } : {}),
+            ...(formData.description ? { description: formData.description } : {})
+        };
+
+        let error;
+        if (editing) {
+            error = (await supabase.from(tableName).update(payload).eq("id", editing.id)).error;
+        } else {
+            error = (await supabase.from(tableName).insert(payload)).error;
+        }
+
+        if (!error) onSuccess();
+        setLoading(false);
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+            <div className="space-y-2">
+                <Label className="text-[10px] uppercase font-bold text-slate-500">Nombre</Label>
+                <Input
+                    value={formData.name}
+                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                    className="bg-white/5 border-white/10 font-bold"
+                    required
+                />
+            </div>
+            <div className="space-y-2">
+                <Label className="text-[10px] uppercase font-bold text-slate-500">Código (Opcional)</Label>
+                <Input
+                    value={formData.code}
+                    onChange={e => setFormData({ ...formData, code: e.target.value })}
+                    className="bg-white/5 border-white/10 italic font-bold"
+                />
+            </div>
+            <div className="space-y-2">
+                <Label className="text-[10px] uppercase font-bold text-slate-500">Descripción (Opcional)</Label>
+                <textarea
+                    value={formData.description}
+                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                    className="w-full h-24 rounded-lg bg-white/5 border border-white/10 p-3 text-sm focus:ring-1 focus:ring-indigo-500 outline-none font-bold"
+                />
+            </div>
+            <Button type="submit" disabled={loading} className="w-full py-6 font-black tracking-widest bg-indigo-600 hover:neon-border transition-all duration-300">
+                {loading ? "SINCRONIZANDO..." : (editing ? "ACTUALIZAR CORE" : "DESPLEGAR REGISTRO")}
+            </Button>
+        </form>
     );
 }

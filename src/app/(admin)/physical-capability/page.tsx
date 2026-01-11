@@ -27,8 +27,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, Pencil, Trash2, Download } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -45,7 +45,7 @@ type Capability = z.infer<typeof schema>;
 export default function PhysicalCapabilityAdmin() {
   const [items, setItems] = useState<Capability[]>([]);
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
+  // Removed unused loading
   const [editing, setEditing] = useState<Capability | null>(null);
   const [open, setOpen] = useState(false);
   const [toDelete, setToDelete] = useState<Capability | null>(null);
@@ -59,7 +59,7 @@ export default function PhysicalCapabilityAdmin() {
     const fetch = async () => {
       const { data, error } = await supabase.from("physical_capability").select("id, name").order("id", { ascending: true });
       if (!error && data) setItems(data);
-      setLoading(false);
+      // setLoading(false);
     };
     fetch();
   }, []);
@@ -189,7 +189,7 @@ export default function PhysicalCapabilityAdmin() {
             <AlertDialogHeader>
               <AlertDialogTitle>Eliminar</AlertDialogTitle>
               <AlertDialogDescription>
-                ¿Estás seguro de que deseas eliminar "{toDelete?.name}"?
+                ¿Estás seguro de que deseas eliminar &quot;{toDelete?.name}&quot;?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

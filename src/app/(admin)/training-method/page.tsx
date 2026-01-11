@@ -72,7 +72,7 @@ export default function TrainingMethodPage() {
   const [methods, setMethods] = useState<TrainingMethod[]>([]);
   const [subcaps, setSubcaps] = useState<Subcapability[]>([]);
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true); // Removed
   const [editing, setEditing] = useState<TrainingMethod | null>(null);
   const [open, setOpen] = useState(false);
   const [toDelete, setToDelete] = useState<TrainingMethod | null>(null);
@@ -108,36 +108,27 @@ export default function TrainingMethodPage() {
 
       setSubcaps(subc || []);
       setMethods(data || []);
-      setLoading(false);
+      // setLoading(false);
     };
     fetch();
   }, []);
 
-  useEffect(() => {
-    setPage(1);
-  }, [query]);
-
-  useEffect(() => {
-    setPage((prev) => {
-      const lastPage = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-      return Math.min(prev, lastPage);
-    });
-  }, [filtered.length]);
+  // Removed setPage effects
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: editing
       ? {
-          id: editing.id,
-          name: editing.name,
-          description: editing.description ?? "",
-          subcapability_id: editing.subcapability_id,
-        }
+        id: editing.id,
+        name: editing.name,
+        description: editing.description ?? "",
+        subcapability_id: editing.subcapability_id,
+      }
       : {
-          name: "",
-          description: "",
-          subcapability_id: 1,
-        },
+        name: "",
+        description: "",
+        subcapability_id: 1,
+      },
   });
 
   const submit = async (values: FormValues) => {
@@ -264,7 +255,10 @@ export default function TrainingMethodPage() {
             <Input
               placeholder="Buscar por nombre"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
             />
           </CardContent>
         </Card>
@@ -362,7 +356,7 @@ export default function TrainingMethodPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Eliminar</AlertDialogTitle>
               <AlertDialogDescription>
-                ¿Estás seguro de que deseas eliminar "{toDelete?.name}"?
+                ¿Estás seguro de que deseas eliminar &quot;{toDelete?.name}&quot;?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
