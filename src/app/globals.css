@@ -79,19 +79,19 @@
 }
 
 .dark {
-  --background: oklch(0.129 0.042 264.695);
+  --background: oklch(0.08 0.02 264.695);
   --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
+  --card: oklch(0.12 0.03 265.755);
   --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
+  --popover: oklch(0.12 0.03 265.755);
   --popover-foreground: oklch(0.984 0.003 247.858);
   --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
+  --primary-foreground: oklch(0.12 0.03 265.755);
+  --secondary: oklch(0.18 0.04 260.031);
   --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
+  --muted: oklch(0.18 0.04 260.031);
   --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
+  --accent: oklch(0.18 0.04 260.031);
   --accent-foreground: oklch(0.984 0.003 247.858);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
@@ -102,11 +102,11 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
+  --sidebar: oklch(0.12 0.03 265.755);
   --sidebar-foreground: oklch(0.984 0.003 247.858);
   --sidebar-primary: oklch(0.488 0.243 264.376);
   --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
+  --sidebar-accent: oklch(0.18 0.04 260.031);
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
@@ -131,10 +131,10 @@
   }
 
   .dark .glass-card {
-    background-color: rgba(15, 23, 42, 0.95);
+    background-color: rgba(15, 23, 42, 0.98);
     /* More opaque for clarity */
     border: 1px solid rgba(255, 255, 255, 0.15);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
   }
 
   .glass-dialog {
@@ -144,9 +144,9 @@
   }
 
   .dark .glass-dialog {
-    background-color: #020617;
+    background-color: #0f172a;
     border: 1px solid rgba(255, 255, 255, 0.25);
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
   }
 
   .neon-border {
@@ -177,7 +177,7 @@
   }
 
   .dark .gradient-bg {
-    background-color: #020617;
+    background-color: #0f172a;
   }
 
   .animate-glow {
